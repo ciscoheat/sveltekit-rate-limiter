@@ -4,7 +4,7 @@ import { nanoid } from 'nanoid';
 import TTLCache from '@isaacs/ttlcache';
 
 type RateHash = string;
-type RateUnit = 's' | 'm' | 'h' | 'd';
+type RateUnit = 'ms' | 's' | 'm' | 'h' | 'd';
 type Rate = [number, RateUnit];
 
 interface RateLimiterReadable {
@@ -28,7 +28,13 @@ class TTLStore implements RateLimiterWritable {
 	constructor(maxTTL: number, maxItems = Infinity) {
 		this.cache = new TTLCache({
 			ttl: maxTTL,
-			max: maxItems
+			max: maxItems,
+			noUpdateTTL: true
+			/*
+			dispose(value, key, reason) {
+				console.log('TTLStore ~ dispose', value, key, reason);
+			}
+      */
 		});
 	}
 
@@ -44,9 +50,7 @@ class TTLStore implements RateLimiterWritable {
 
 	add(hash: RateHash, unit: RateUnit) {
 		const currentRate = this.cache.get(hash);
-		return currentRate === undefined
-			? this.set(hash, 1, unit)
-			: this.set(hash, currentRate + 1, unit);
+		return this.set(hash, (currentRate ?? 0) + 1, unit);
 	}
 }
 
@@ -78,41 +82,68 @@ class IPUserAgentRateLimiter implements RateLimiterPlugin {
 	}
 }
 
+type CookieRateLimiterOptions = {
+	name: string;
+	secret: string;
+	rate: Rate;
+	preflight: boolean;
+};
+
 class CookieRateLimiter implements RateLimiterPlugin {
 	readonly rate: Rate;
+	private readonly secret: string;
+	private readonly requirePreflight: boolean;
 	private readonly cookieId: string;
 
-	constructor(cookieId: string, rate: Rate) {
-		this.cookieId = cookieId;
-		this.rate = rate;
+	constructor(options: CookieRateLimiterOptions) {
+		this.cookieId = options.name;
+		this.secret = options.secret;
+		this.rate = options.rate;
+		this.requirePreflight = options.preflight;
 	}
 
 	hash(event: RequestEvent) {
-		const currentId = this.userIdFromCookie(event.cookies.get(this.cookieId));
+		const currentId = this.userIdFromCookie(
+			event.cookies.get(this.cookieId),
+			event
+		);
 		return currentId ? currentId : false;
 	}
 
-	preflight(request: RequestEvent) {
-		const data = request.cookies.get(this.cookieId);
+	preflight(event: RequestEvent): string {
+		const data = event.cookies.get(this.cookieId);
 		if (data) {
-			const userId = this.userIdFromCookie(data);
+			const userId = this.userIdFromCookie(data, event);
 			if (userId) return userId;
 		}
 		const userId = nanoid();
-		request.cookies.set(
+		event.cookies.set(
 			this.cookieId,
-			userId + ';' + RateLimiter.hash(this.cookieId + userId)
+			userId + ';' + RateLimiter.hash(this.secret + userId),
+			{
+				path: '/',
+				httpOnly: true,
+				maxAge: RateLimiter.TTLTime(this.rate[1]) / 1000
+			}
 		);
 		return userId;
 	}
 
-	private userIdFromCookie(cookie: string | undefined) {
-		if (!cookie) return null;
-		const cookieData = cookie.split(';');
-		if (cookieData.length != 2) return null;
-		if (RateLimiter.hash(this.cookieId + cookieData[0]) != cookieData[1])
-			return null;
-		return cookieData[0];
+	private userIdFromCookie(
+		cookie: string | undefined,
+		event: RequestEvent
+	): string | null {
+		const empty = () => {
+			return this.requirePreflight ? null : this.preflight(event);
+		};
+
+		if (!cookie) return empty();
+		const [userId, secretHash] = cookie.split(';');
+		if (!userId || !secretHash) return empty();
+		if (RateLimiter.hash(this.secret + userId) != secretHash) {
+			return empty();
+		}
+		return userId;
 	}
 }
 
@@ -122,16 +153,19 @@ export class RateLimiter {
 	private store: RateLimiterWritable;
 	private plugins: RateLimiterPlugin[];
 
+	readonly cookieLimiter: CookieRateLimiter | undefined;
+
 	static hash(data: string): RateHash {
 		return crypto.createHash('sha256').update(data).digest('hex');
 	}
 
 	static TTLTime(unit: RateUnit) {
-		let ttl = 1000;
-		if (unit == 'm') ttl = ttl * 60;
-		else if (unit == 'h') ttl = ttl * 60 * 60;
-		else if (unit == 'd') ttl = ttl * 60 * 60 * 24;
-		return ttl;
+		if (unit == 'ms') return 1;
+		if (unit == 's') return 1000;
+		if (unit == 'm') return 60 * 1000;
+		if (unit == 'h') return 60 * 60 * 1000;
+		if (unit == 'd') return 24 * 60 * 60 * 1000;
+		throw new Error('Invalid unit for TTLTime: ' + unit);
 	}
 
 	add(event: RequestEvent) {
@@ -152,26 +186,27 @@ export class RateLimiter {
 		options: {
 			plugins?: RateLimiterPlugin[];
 			store?: RateLimiterWritable;
-			defaultRates?: {
+			rates?: {
 				ip?: Rate;
 				ipAndUserAgent?: Rate;
-				cookie?: { name: string; rate: Rate };
+				cookie?: CookieRateLimiterOptions;
 			};
 		} = {}
 	) {
 		this.plugins = options.plugins ?? [];
 
-		if (options.defaultRates?.ip)
-			this.plugins.push(new IPRateLimiter(options.defaultRates.ip));
+		if (options.rates?.ip)
+			this.plugins.push(new IPRateLimiter(options.rates.ip));
 
-		if (options.defaultRates?.ipAndUserAgent)
+		if (options.rates?.ipAndUserAgent)
 			this.plugins.push(
-				new IPUserAgentRateLimiter(options.defaultRates.ipAndUserAgent)
+				new IPUserAgentRateLimiter(options.rates.ipAndUserAgent)
 			);
 
-		if (options.defaultRates?.cookie) {
-			const { name, rate } = options.defaultRates.cookie;
-			this.plugins.push(new CookieRateLimiter(name, rate));
+		if (options.rates?.cookie) {
+			this.plugins.push(
+				(this.cookieLimiter = new CookieRateLimiter(options.rates.cookie))
+			);
 		}
 
 		const maxTTL = this.plugins.reduce((acc, plugin) => {
