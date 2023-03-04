@@ -8,15 +8,15 @@ type RateUnit = 'ms' | 's' | 'm' | 'h' | 'd';
 type Rate = [number, RateUnit];
 
 interface RateLimiterReadable {
-	check: (hash: RateHash, unit: RateUnit) => number;
+	check: (hash: RateHash, unit: RateUnit) => Promise<number>;
 }
 
 interface RateLimiterWritable extends RateLimiterReadable {
-	add: (hash: RateHash, unit: RateUnit) => number;
+	add: (hash: RateHash, unit: RateUnit) => Promise<number>;
 }
 
 interface RateLimiterPlugin {
-	hash: (event: RequestEvent) => string | false;
+	hash: (event: RequestEvent) => Promise<string | false>;
 	readonly rate: Rate;
 }
 
@@ -43,12 +43,12 @@ class TTLStore implements RateLimiterWritable {
 		return rate;
 	}
 
-	check(hash: RateHash): number {
+	async check(hash: RateHash) {
 		return this.cache.get(hash) ?? 0;
 	}
 
-	add(hash: RateHash, unit: RateUnit): number {
-		const currentRate = this.check(hash);
+	async add(hash: RateHash, unit: RateUnit) {
+		const currentRate = await this.check(hash);
 		return this.set(hash, currentRate + 1, unit);
 	}
 }
@@ -62,7 +62,7 @@ class IPRateLimiter implements RateLimiterPlugin {
 		this.rate = rate;
 	}
 
-	hash(event: RequestEvent) {
+	async hash(event: RequestEvent) {
 		return event.getClientAddress();
 	}
 }
@@ -74,7 +74,7 @@ class IPUserAgentRateLimiter implements RateLimiterPlugin {
 		this.rate = rate;
 	}
 
-	hash(event: RequestEvent) {
+	async hash(event: RequestEvent) {
 		const ua = event.request.headers.get('user-agent');
 		if (!ua) return false;
 		return event.getClientAddress() + ua;
@@ -101,7 +101,7 @@ class CookieRateLimiter implements RateLimiterPlugin {
 		this.requirePreflight = options.preflight;
 	}
 
-	hash(event: RequestEvent) {
+	async hash(event: RequestEvent) {
 		const currentId = this.userIdFromCookie(
 			event.cookies.get(this.cookieId),
 			event
@@ -149,8 +149,11 @@ class CookieRateLimiter implements RateLimiterPlugin {
 ///// Main class //////////////////////////////////////////////////////////////
 
 export class RateLimiter {
-	private store: RateLimiterWritable;
-	private plugins: RateLimiterPlugin[];
+	private readonly store: RateLimiterWritable;
+	private readonly plugins: RateLimiterPlugin[];
+	private readonly onLimited:
+		| ((event: RequestEvent) => void | unknown)
+		| undefined;
 
 	readonly cookieLimiter: CookieRateLimiter | undefined;
 
@@ -167,10 +170,10 @@ export class RateLimiter {
 		throw new Error('Invalid unit for TTLTime: ' + unit);
 	}
 
-	check(event: RequestEvent) {
+	async check(event: RequestEvent) {
 		let status = true;
 		for (const plugin of this.plugins) {
-			const id = plugin.hash(event);
+			const id = await plugin.hash(event);
 			if (id === false) status = false;
 			if (!id)
 				throw new Error(
@@ -179,9 +182,11 @@ export class RateLimiter {
 
 			const hash = RateLimiter.hash(id);
 
-			const rate = this.store.add(hash, plugin.rate[1]);
+			const rate = await this.store.add(hash, plugin.rate[1]);
 			if (rate > plugin.rate[0]) status = false;
 		}
+
+		if (!status && this.onLimited) await this.onLimited(event);
 		return status;
 	}
 
@@ -190,6 +195,7 @@ export class RateLimiter {
 			plugins?: RateLimiterPlugin[];
 			store?: RateLimiterWritable;
 			maxItems?: number;
+			onLimited?: (event: RequestEvent) => void | unknown;
 			rates?: {
 				IP?: Rate;
 				IPUA?: Rate;
@@ -198,6 +204,7 @@ export class RateLimiter {
 		} = {}
 	) {
 		this.plugins = options.plugins ?? [];
+		this.onLimited = options.onLimited;
 
 		if (options.rates?.IP)
 			this.plugins.push(new IPRateLimiter(options.rates.IP));
