@@ -24,7 +24,8 @@
 		"dist"
 	],
 	"peerDependencies": {
-		"@sveltejs/kit": "1.x"
+		"@sveltejs/kit": "1.x",
+		"@isaacs/ttlcache": "1.x"
 	},
 	"devDependencies": {
 		"@isaacs/ttlcache": "^1.2.1",
