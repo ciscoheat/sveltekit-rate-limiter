@@ -37,7 +37,7 @@ describe('Basic rate limiter', async () => {
 	it('should limit IP requests', async () => {
 		const limiter = new RateLimiter({
 			rates: {
-				ip: [2, 's']
+				IP: [2, 's']
 			}
 		});
 
@@ -63,7 +63,7 @@ describe('Basic rate limiter', async () => {
 	it('should limit IP + User Agent requests', async () => {
 		const limiter = new RateLimiter({
 			rates: {
-				ipAndUserAgent: [2, 'ms']
+				IPUA: [2, 'ms']
 			}
 		});
 
@@ -107,11 +107,11 @@ describe('Basic rate limiter', async () => {
 		expect(limiter.check(event)).toEqual(false);
 	});
 
-	it.only('should limit multiple plugins', async () => {
+	it('should limit multiple plugins', async () => {
 		const limiter = new RateLimiter({
 			rates: {
-				ip: [10, 'ms'],
-				ipAndUserAgent: [5, 'ms'],
+				IP: [10, 'ms'],
+				IPUA: [5, 'ms'],
 				cookie: {
 					name: 'testcookie',
 					secret: 'SECRET',

@@ -189,22 +189,21 @@ export class RateLimiter {
 		options: {
 			plugins?: RateLimiterPlugin[];
 			store?: RateLimiterWritable;
+			maxItems?: number;
 			rates?: {
-				ip?: Rate;
-				ipAndUserAgent?: Rate;
+				IP?: Rate;
+				IPUA?: Rate;
 				cookie?: CookieRateLimiterOptions;
 			};
 		} = {}
 	) {
 		this.plugins = options.plugins ?? [];
 
-		if (options.rates?.ip)
-			this.plugins.push(new IPRateLimiter(options.rates.ip));
+		if (options.rates?.IP)
+			this.plugins.push(new IPRateLimiter(options.rates.IP));
 
-		if (options.rates?.ipAndUserAgent)
-			this.plugins.push(
-				new IPUserAgentRateLimiter(options.rates.ipAndUserAgent)
-			);
+		if (options.rates?.IPUA)
+			this.plugins.push(new IPUserAgentRateLimiter(options.rates.IPUA));
 
 		if (options.rates?.cookie) {
 			this.plugins.push(
@@ -230,6 +229,6 @@ export class RateLimiter {
 			return Math.max(time, acc);
 		}, 0);
 
-		this.store = options.store ?? new TTLStore(maxTTL);
+		this.store = options.store ?? new TTLStore(maxTTL, options.maxItems);
 	}
 }
