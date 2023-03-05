@@ -2,6 +2,8 @@
 
 A modular rate limiter for password resets, account registration, etc. Use in your `page.server.ts` files, or `hooks.server.ts`.
 
+Uses an in-memory cache, but can be swapped for something else. Same for limiters, which are plugins. See the [source file](https://github.com/ciscoheat/sveltekit-rate-limiter/blob/main/src/lib/rateLimiter.ts) for interfaces.
+
 ```ts
 import { RateLimiter } from 'sveltekit-rate-limiter';
 
