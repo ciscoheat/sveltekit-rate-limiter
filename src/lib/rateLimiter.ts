@@ -7,11 +7,10 @@ type RateHash = string;
 type RateUnit = 'ms' | 's' | 'm' | 'h' | 'd';
 type Rate = [number, RateUnit];
 
-interface RateLimiterReadable {
-  check: (hash: RateHash, unit: RateUnit) => Promise<number>;
-}
+///// Interfaces /////////////////////////////////////////////////////////////
 
-interface RateLimiterWritable extends RateLimiterReadable {
+interface RateLimiterStore {
+  check: (hash: RateHash, unit: RateUnit) => Promise<number>;
   add: (hash: RateHash, unit: RateUnit) => Promise<number>;
 }
 
@@ -22,7 +21,7 @@ interface RateLimiterPlugin {
 
 ///// Store ///////////////////////////////////////////////////////////////////
 
-class TTLStore implements RateLimiterWritable {
+class TTLStore implements RateLimiterStore {
   private cache: TTLCache<RateHash, number>;
 
   constructor(maxTTL: number, maxItems = Infinity) {
@@ -150,7 +149,7 @@ class CookieRateLimiter implements RateLimiterPlugin {
 
 export type RateLimiterOptions = {
   plugins?: RateLimiterPlugin[];
-  store?: RateLimiterWritable;
+  store?: RateLimiterStore;
   maxItems?: number;
   onLimited?: (
     event: RequestEvent,
@@ -164,7 +163,7 @@ export type RateLimiterOptions = {
 };
 
 export class RateLimiter {
-  private readonly store: RateLimiterWritable;
+  private readonly store: RateLimiterStore;
   private readonly plugins: RateLimiterPlugin[];
   private readonly onLimited: RateLimiterOptions['onLimited'] | undefined;
 
