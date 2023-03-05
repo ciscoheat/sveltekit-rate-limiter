@@ -1,6 +1,6 @@
 {
   "name": "sveltekit-rate-limiter",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build && npm run package",
@@ -10,7 +10,7 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "test:unit": "vitest",
-    "test": "vitest",
+    "test": "vitest run",
     "lint": "prettier --plugin-search-dir . --check . && eslint .",
     "format": "prettier --plugin-search-dir . --write ."
   },
