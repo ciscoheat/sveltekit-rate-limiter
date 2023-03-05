@@ -6,25 +6,25 @@ A modular rate limiter for password resets, account registration, etc. Use in yo
 import { RateLimiter } from 'sveltekit-rate-limiter';
 
 const limiter = new RateLimiter({
-	rates: {
-		IP: [10, 'h'],
-		IPUA: [5, 'm'],
-		cookie: {
-			name: 'testcookie',
-			secret: 'SECRETKEY',
-			rate: [2, 'm'],
-			preflight: true
-		}
-	}
+  rates: {
+    IP: [10, 'h'],
+    IPUA: [5, 'm'],
+    cookie: {
+      name: 'testcookie',
+      secret: 'SECRETKEY',
+      rate: [2, 'm'],
+      preflight: true
+    }
+  }
 });
 
 export const load = async (event) => {
-	limiter.cookieLimiter?.preflight(event);
+  limiter.cookieLimiter?.preflight(event);
 };
 
 export const actions = {
-	default: async (event) => {
-		if (!limiter.check(event)) return fail(429);
-	}
+  default: async (event) => {
+    if (!limiter.check(event)) return fail(429);
+  }
 };
 ```
