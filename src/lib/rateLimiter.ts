@@ -148,12 +148,25 @@ class CookieRateLimiter implements RateLimiterPlugin {
 
 ///// Main class //////////////////////////////////////////////////////////////
 
+export type RateLimiterOptions = {
+	plugins?: RateLimiterPlugin[];
+	store?: RateLimiterWritable;
+	maxItems?: number;
+	onLimited?: (
+		event: RequestEvent,
+		reason: 'rate' | 'rejected'
+	) => Promise<void | boolean> | void | boolean;
+	rates?: {
+		IP?: Rate;
+		IPUA?: Rate;
+		cookie?: CookieRateLimiterOptions;
+	};
+};
+
 export class RateLimiter {
 	private readonly store: RateLimiterWritable;
 	private readonly plugins: RateLimiterPlugin[];
-	private readonly onLimited:
-		| ((event: RequestEvent) => void | unknown)
-		| undefined;
+	private readonly onLimited: RateLimiterOptions['onLimited'] | undefined;
 
 	readonly cookieLimiter: CookieRateLimiter | undefined;
 
@@ -171,38 +184,37 @@ export class RateLimiter {
 	}
 
 	async check(event: RequestEvent) {
-		let status = true;
 		for (const plugin of this.plugins) {
 			const id = await plugin.hash(event);
-			if (id === false) status = false;
-			if (!id)
+			if (id === false) {
+				if (this.onLimited) {
+					const status = await this.onLimited(event, 'rejected');
+					if (status === true) return true;
+				}
+				return false;
+			}
+			if (!id) {
 				throw new Error(
 					'Empty hash returned from rate limiter ' + plugin.constructor.name
 				);
+			}
 
 			const hash = RateLimiter.hash(id);
 
 			const rate = await this.store.add(hash, plugin.rate[1]);
-			if (rate > plugin.rate[0]) status = false;
+			if (rate > plugin.rate[0]) {
+				if (this.onLimited) {
+					const status = await this.onLimited(event, 'rate');
+					if (status === true) return true;
+				}
+				return false;
+			}
 		}
 
-		if (!status && this.onLimited) await this.onLimited(event);
-		return status;
+		return true;
 	}
 
-	constructor(
-		options: {
-			plugins?: RateLimiterPlugin[];
-			store?: RateLimiterWritable;
-			maxItems?: number;
-			onLimited?: (event: RequestEvent) => void | unknown;
-			rates?: {
-				IP?: Rate;
-				IPUA?: Rate;
-				cookie?: CookieRateLimiterOptions;
-			};
-		} = {}
-	) {
+	constructor(options: RateLimiterOptions = {}) {
 		this.plugins = options.plugins ?? [];
 		this.onLimited = options.onLimited;
 
@@ -222,14 +234,12 @@ export class RateLimiter {
 			throw new Error('No plugins set for RateLimiter!');
 		}
 
-		/*
 		// Sort plugins by rate, if early cancelling
 		this.plugins.sort((a, b) => {
 			const diff =
 				RateLimiter.TTLTime(a.rate[1]) - RateLimiter.TTLTime(b.rate[1]);
 			return diff == 0 ? a.rate[0] - b.rate[0] : diff;
 		});
-    */
 
 		const maxTTL = this.plugins.reduce((acc, plugin) => {
 			const time = RateLimiter.TTLTime(plugin.rate[1]);
