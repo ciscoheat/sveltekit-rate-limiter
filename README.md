@@ -7,13 +7,13 @@ import { RateLimiter } from 'sveltekit-rate-limiter';
 
 const limiter = new RateLimiter({
   rates: {
-    IP: [10, 'h'],
-    IPUA: [5, 'm'],
-    cookie: {
-      name: 'testcookie',
-      secret: 'SECRETKEY',
+    IP: [10, 'h'],  // IP address limiter
+    IPUA: [5, 'm'], // IP + User Agent limiter
+    cookie: {       // Cookie limiter
+      name: 'limiterid',
+      secret: 'SECRETKEY-SERVER-ONLY',
       rate: [2, 'm'],
-      preflight: true
+      preflight: true // Require preflight call (see load)
     }
   }
 });
