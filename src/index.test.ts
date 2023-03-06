@@ -20,6 +20,13 @@ function mockEvent(): Partial<RequestEvent> {
       get(name) {
         return cookieStore.get(name);
       },
+      getAll() {
+        return Array.from(cookieStore.keys()).map((name) => ({
+          name,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          value: cookieStore.get(name)!
+        }));
+      },
       set(name, value) {
         cookieStore.set(name, value);
       },
@@ -52,13 +59,14 @@ describe('Basic rate limiter', async () => {
 
     expect(await limiter.check(event)).toEqual(false);
     await delay(10);
+
     expect(await limiter.check(event)).toEqual(false);
     await delay(600);
 
     expect(await limiter.check(event)).toEqual(true);
     expect(await limiter.check(event)).toEqual(true);
     expect(await limiter.check(event)).toEqual(false);
-  }, 60000);
+  });
 
   it('should limit IP + User Agent requests', async () => {
     const limiter = new RateLimiter({
