@@ -1,6 +1,6 @@
 {
   "name": "sveltekit-rate-limiter",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build && npm run package",
