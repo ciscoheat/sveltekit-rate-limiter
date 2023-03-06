@@ -82,9 +82,10 @@ class IPUserAgentRateLimiter implements RateLimiterPlugin {
 
 type CookieRateLimiterOptions = {
   name: string;
-  secret?: string;
+  secret: string;
   rate: Rate;
   preflight: boolean;
+  maxAge?: number;
 };
 
 class CookieRateLimiter implements RateLimiterPlugin {
@@ -92,12 +93,14 @@ class CookieRateLimiter implements RateLimiterPlugin {
   private readonly secret: string;
   private readonly requirePreflight: boolean;
   private readonly cookieId: string;
+  private readonly maxAge: number;
 
   constructor(options: CookieRateLimiterOptions) {
     this.cookieId = options.name;
-    this.secret = options.secret ?? nanoid();
+    this.secret = options.secret;
     this.rate = options.rate;
     this.requirePreflight = options.preflight;
+    this.maxAge = options.maxAge ?? 60 * 60 * 24 * 7;
   }
 
   async hash(event: RequestEvent) {
@@ -121,7 +124,7 @@ class CookieRateLimiter implements RateLimiterPlugin {
       {
         path: '/',
         httpOnly: true,
-        maxAge: RateLimiter.TTLTime(this.rate[1]) / 1000
+        maxAge: this.maxAge
       }
     );
     return userId;
