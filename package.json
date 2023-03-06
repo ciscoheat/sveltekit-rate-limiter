@@ -24,11 +24,9 @@
     "dist"
   ],
   "peerDependencies": {
-    "@isaacs/ttlcache": "1.x",
     "@sveltejs/kit": "1.x"
   },
   "devDependencies": {
-    "@isaacs/ttlcache": "^1.2.1",
     "@sveltejs/adapter-auto": "^2.0.0",
     "@sveltejs/kit": "^1.10.0",
     "@sveltejs/package": "^2.0.2",
@@ -49,6 +47,9 @@
     "vite": "^4.1.4",
     "vitest": "^0.29.2",
     "vitest-mock-extended": "^1.0.9"
+  },
+  "dependencies": {
+    "@isaacs/ttlcache": "^1.2.1"
   },
   "svelte": "./dist/index.js",
   "types": "./dist/index.d.ts",
