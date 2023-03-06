@@ -9,9 +9,10 @@ import { RateLimiter } from 'sveltekit-rate-limiter';
 
 const limiter = new RateLimiter({
   rates: {
-    IP: [10, 'h'],  // IP address limiter
+    IP: [10, 'h'], // IP address limiter
     IPUA: [5, 'm'], // IP + User Agent limiter
-    cookie: {       // Cookie limiter
+    cookie: {
+      // Cookie limiter
       name: 'limiterid',
       secret: 'SECRETKEY-SERVER-ONLY',
       rate: [2, 'm'],
@@ -26,7 +27,7 @@ export const load = async (event) => {
 
 export const actions = {
   default: async (event) => {
-    if (!limiter.check(event)) return fail(429);
+    if (!(await limiter.check(event))) return fail(429);
   }
 };
 ```
