@@ -4,7 +4,19 @@ import { nanoid } from 'nanoid';
 import TTLCache from '@isaacs/ttlcache';
 
 type RateHash = string;
-type RateUnit = 'ms' | 's' | 'm' | '15m' | '30m' | 'h' | 'd';
+type RateUnit =
+  | 'ms'
+  | 's'
+  | '15s'
+  | '30s'
+  | 'm'
+  | '15m'
+  | '30m'
+  | 'h'
+  | '2h'
+  | '6h'
+  | '12h'
+  | 'd';
 type Rate = [number, RateUnit];
 
 ///// Interfaces /////////////////////////////////////////////////////////////
@@ -12,6 +24,7 @@ type Rate = [number, RateUnit];
 interface RateLimiterStore {
   check: (hash: RateHash, unit: RateUnit) => Promise<number>;
   add: (hash: RateHash, unit: RateUnit) => Promise<number>;
+  clear: () => Promise<void>;
 }
 
 interface RateLimiterPlugin {
@@ -40,6 +53,10 @@ class TTLStore implements RateLimiterStore {
   set(hash: RateHash, rate: number, unit: RateUnit): number {
     this.cache.set(hash, rate, { ttl: RateLimiter.TTLTime(unit) });
     return rate;
+  }
+
+  async clear() {
+    return this.cache.clear();
   }
 
   async check(hash: RateHash) {
@@ -180,9 +197,14 @@ export class RateLimiter {
     if (unit == 'ms') return 1;
     if (unit == 's') return 1000;
     if (unit == 'm') return 60 * 1000;
+    if (unit == 'h') return 60 * 60 * 1000;
+    if (unit == '15s') return 15 * 1000;
+    if (unit == '30s') return 30 * 1000;
     if (unit == '15m') return 15 * 60 * 1000;
     if (unit == '30m') return 30 * 60 * 1000;
-    if (unit == 'h') return 60 * 60 * 1000;
+    if (unit == '2h') return 2 * 60 * 60 * 1000;
+    if (unit == '6h') return 6 * 60 * 60 * 1000;
+    if (unit == '12h') return 12 * 60 * 60 * 1000;
     if (unit == 'd') return 24 * 60 * 60 * 1000;
     throw new Error('Invalid unit for TTLTime: ' + unit);
   }
