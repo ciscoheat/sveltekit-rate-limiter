@@ -3,8 +3,7 @@ import crypto from 'crypto';
 import { nanoid } from 'nanoid';
 import TTLCache from '@isaacs/ttlcache';
 
-type RateHash = string;
-type RateUnit =
+export type RateUnit =
   | 'ms'
   | 's'
   | '15s'
@@ -17,17 +16,18 @@ type RateUnit =
   | '6h'
   | '12h'
   | 'd';
-type Rate = [number, RateUnit];
+
+export type Rate = [number, RateUnit];
 
 ///// Interfaces /////////////////////////////////////////////////////////////
 
-interface RateLimiterStore {
-  check: (hash: RateHash, unit: RateUnit) => Promise<number>;
-  add: (hash: RateHash, unit: RateUnit) => Promise<number>;
+export interface RateLimiterStore {
+  check: (hash: string, unit: RateUnit) => Promise<number>;
+  add: (hash: string, unit: RateUnit) => Promise<number>;
   clear: () => Promise<void>;
 }
 
-interface RateLimiterPlugin {
+export interface RateLimiterPlugin {
   hash: (event: RequestEvent) => Promise<string | false>;
   readonly rate: Rate;
 }
@@ -35,7 +35,7 @@ interface RateLimiterPlugin {
 ///// Store ///////////////////////////////////////////////////////////////////
 
 class TTLStore implements RateLimiterStore {
-  private cache: TTLCache<RateHash, number>;
+  private cache: TTLCache<string, number>;
 
   constructor(maxTTL: number, maxItems = Infinity) {
     this.cache = new TTLCache({
@@ -50,7 +50,7 @@ class TTLStore implements RateLimiterStore {
     });
   }
 
-  set(hash: RateHash, rate: number, unit: RateUnit): number {
+  set(hash: string, rate: number, unit: RateUnit): number {
     this.cache.set(hash, rate, { ttl: RateLimiter.TTLTime(unit) });
     return rate;
   }
@@ -59,11 +59,11 @@ class TTLStore implements RateLimiterStore {
     return this.cache.clear();
   }
 
-  async check(hash: RateHash) {
+  async check(hash: string) {
     return this.cache.get(hash) ?? 0;
   }
 
-  async add(hash: RateHash, unit: RateUnit) {
+  async add(hash: string, unit: RateUnit) {
     const currentRate = await this.check(hash);
     return this.set(hash, currentRate + 1, unit);
   }
@@ -189,7 +189,7 @@ export class RateLimiter {
 
   readonly cookieLimiter: CookieRateLimiter | undefined;
 
-  static hash(data: string): RateHash {
+  static hash(data: string): string {
     return crypto.createHash('sha256').update(data).digest('hex');
   }
 
