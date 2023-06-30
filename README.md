@@ -43,7 +43,7 @@ interface RateLimiterPlugin {
 }
 ```
 
-In `hash`, return a unique string for a `RequestEvent`, or a boolean to make the request fail or succeed no matter the current rate. The string will be hashed later.
+In `hash`, return a string based on a `RequestEvent`, which will be counted and checked against the rate, or a boolean to make the request fail (`false`) or succeed (`true`) no matter the current rate. The string will be hashed later.
 
 Here's the source for the IP + User Agent limiter, as an example:
 
