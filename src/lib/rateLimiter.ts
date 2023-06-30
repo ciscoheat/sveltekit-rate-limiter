@@ -28,7 +28,7 @@ export interface RateLimiterStore {
 }
 
 export interface RateLimiterPlugin {
-  hash: (event: RequestEvent) => Promise<string | false>;
+  hash: (event: RequestEvent) => Promise<string | boolean>;
   readonly rate: Rate;
 }
 
@@ -218,7 +218,10 @@ export class RateLimiter {
           if (status === true) return true;
         }
         return false;
+      } else if (id === true) {
+        return true;
       }
+
       if (!id) {
         throw new Error(
           'Empty hash returned from rate limiter ' + plugin.constructor.name

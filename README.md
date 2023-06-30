@@ -31,3 +31,47 @@ export const actions = {
   }
 };
 ```
+
+## Creating a custom limiter
+
+Implement the `RateLimiterPlugin` interface:
+
+```ts
+interface RateLimiterPlugin {
+  hash: (event: RequestEvent) => Promise<string | boolean>;
+  readonly rate: Rate;
+}
+```
+
+In `hash`, return a unique string for a `RequestEvent`, or a boolean to make the request fail or succeed no matter the current rate. The string will be hashed later.
+
+Here's the source for the IP + User Agent limiter, as an example:
+
+```ts
+import type { RequestEvent } from '@sveltejs/kit';
+import type { Rate, RateLimiterPlugin } from 'sveltekit-rate-limiter';
+
+class IPUserAgentRateLimiter implements RateLimiterPlugin {
+  readonly rate: Rate;
+
+  constructor(rate: Rate) {
+    this.rate = rate;
+  }
+
+  async hash(event: RequestEvent) {
+    const ua = event.request.headers.get('user-agent');
+    if (!ua) return false;
+    return event.getClientAddress() + ua;
+  }
+}
+```
+
+Add the limiter to `options.plugins` to use it.
+
+```ts
+import { RateLimiter } from 'sveltekit-rate-limiter';
+
+const limiter = new RateLimiter({
+  plugins: [new CustomLimiter([5, 'm'])]
+});
+```
