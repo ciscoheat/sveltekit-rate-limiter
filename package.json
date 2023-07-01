@@ -33,8 +33,24 @@
     ".": {
       "types": "./dist/index.d.ts",
       "svelte": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "svelte": "./dist/server/index.js"
     }
   },
+  "typesVersions": {
+    ">4.0": {
+      "index.d.ts": [
+        "./dist/index.d.ts"
+      ],
+      "server": [
+        "./dist/server/index.d.ts"
+      ]
+    }
+  },
+  "svelte": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
@@ -66,7 +82,5 @@
   "dependencies": {
     "@isaacs/ttlcache": "^1.4.0"
   },
-  "svelte": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "type": "module"
 }
