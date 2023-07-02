@@ -15,7 +15,7 @@ export const load = (async () => {
 
 export const actions = {
   default: async (event) => {
-    if (!(await limiter.check(event))) {
+    if (await limiter.isLimited(event)) {
       return fail(429, { status: false });
     }
     return { status: true };

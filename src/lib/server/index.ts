@@ -209,17 +209,22 @@ export class RateLimiter {
     throw new Error('Invalid unit for TTLTime: ' + unit);
   }
 
-  async check(event: RequestEvent) {
+  /**
+   * Check if a request event is rate limited.
+   * @param {RequestEvent} event
+   * @returns {Promise<boolean>} true if request is limited, false otherwise
+   */
+  async isLimited(event: RequestEvent): Promise<boolean> {
     for (const plugin of this.plugins) {
       const id = await plugin.hash(event);
       if (id === false) {
         if (this.onLimited) {
           const status = await this.onLimited(event, 'rejected');
-          if (status === true) return true;
+          if (status === true) return false;
         }
-        return false;
-      } else if (id === true) {
         return true;
+      } else if (id === true) {
+        return false;
       }
 
       if (!id) {
@@ -234,13 +239,13 @@ export class RateLimiter {
       if (rate > plugin.rate[0]) {
         if (this.onLimited) {
           const status = await this.onLimited(event, 'rate');
-          if (status === true) return true;
+          if (status === true) return false;
         }
-        return false;
+        return true;
       }
     }
 
-    return true;
+    return false;
   }
 
   constructor(options: RateLimiterOptions = {}) {

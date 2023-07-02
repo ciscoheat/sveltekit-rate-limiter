@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Moved exports to `sveltekit-rate-limiter/server`.
 
+### Added
+
+- Added `isLimited` method.
+
+### Removed
+
+- Removed `check` method, replaced by `isLimited` **which has the condition inverted!**
+
 ### Changed
 
 - `RateLimiterPlugin` interface is now using a getter instead of readonly for `rate`.

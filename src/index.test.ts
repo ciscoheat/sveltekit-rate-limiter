@@ -51,21 +51,21 @@ describe('Basic rate limiter', async () => {
     const event = mock<RequestEvent>();
     event.getClientAddress.mockReturnValue('123.456.789.0');
 
-    expect(await limiter.check(event)).toEqual(true);
+    expect(await limiter.isLimited(event)).toEqual(false);
     await delay(200);
 
-    expect(await limiter.check(event)).toEqual(true);
+    expect(await limiter.isLimited(event)).toEqual(false);
     await delay(300);
 
-    expect(await limiter.check(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(true);
     await delay(10);
 
-    expect(await limiter.check(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(true);
     await delay(600);
 
-    expect(await limiter.check(event)).toEqual(true);
-    expect(await limiter.check(event)).toEqual(true);
-    expect(await limiter.check(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(true);
   });
 
   it('should limit IP + User Agent requests', async () => {
@@ -77,15 +77,15 @@ describe('Basic rate limiter', async () => {
 
     const event = mockEvent() as RequestEvent;
 
-    expect(await limiter.check(event)).toEqual(true);
-    expect(await limiter.check(event)).toEqual(true);
-    expect(await limiter.check(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(true);
 
     await delay(1);
 
-    expect(await limiter.check(event)).toEqual(true);
-    expect(await limiter.check(event)).toEqual(true);
-    expect(await limiter.check(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(true);
   });
 
   it('should limit cookie requests', async () => {
@@ -102,19 +102,19 @@ describe('Basic rate limiter', async () => {
 
     const event = mockEvent() as RequestEvent;
 
-    expect(await limiter.check(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(true);
 
     limiter.cookieLimiter?.preflight(event);
 
-    expect(await limiter.check(event)).toEqual(true);
-    expect(await limiter.check(event)).toEqual(true);
-    expect(await limiter.check(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(true);
 
     await delay(1);
 
-    expect(await limiter.check(event)).toEqual(true);
-    expect(await limiter.check(event)).toEqual(true);
-    expect(await limiter.check(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(false);
+    expect(await limiter.isLimited(event)).toEqual(true);
   });
 
   it('should limit multiple plugins', async () => {
@@ -140,52 +140,52 @@ describe('Basic rate limiter', async () => {
 
     limiter.cookieLimiter?.preflight(event);
 
-    expect(await limiter.check(event)).toEqual(true); //  1 1 1
-    expect(await limiter.check(event)).toEqual(true); //  2 2 2
-    expect(await limiter.check(event)).toEqual(false); // 3 2 2 (Cookie fails)
+    expect(await limiter.isLimited(event)).toEqual(false); //  1 1 1
+    expect(await limiter.isLimited(event)).toEqual(false); //  2 2 2
+    expect(await limiter.isLimited(event)).toEqual(true); // 3 2 2 (Cookie fails)
 
     event.cookies.delete('testcookie');
 
-    expect(await limiter.check(event)).toEqual(true); //  1 3 3
-    expect(await limiter.check(event)).toEqual(true); //  2 4 4
-    expect(await limiter.check(event)).toEqual(false); // 3 4 4 (Cookie fails)
+    expect(await limiter.isLimited(event)).toEqual(false); //  1 3 3
+    expect(await limiter.isLimited(event)).toEqual(false); //  2 4 4
+    expect(await limiter.isLimited(event)).toEqual(true); // 3 4 4 (Cookie fails)
 
     event.cookies.delete('testcookie');
 
-    expect(await limiter.check(event)).toEqual(true); //  1 5 5
-    expect(await limiter.check(event)).toEqual(false); // 2 6 5 (UA fails)
+    expect(await limiter.isLimited(event)).toEqual(false); //  1 5 5
+    expect(await limiter.isLimited(event)).toEqual(true); // 2 6 5 (UA fails)
 
     event.request.headers.set('User-Agent', 'Edge');
 
-    expect(await limiter.check(event)).toEqual(false); // 3 1 6 (Cookie fails)
-    expect(await limiter.check(event)).toEqual(false); // 3 1 6 (Cookie fails)
+    expect(await limiter.isLimited(event)).toEqual(true); // 3 1 6 (Cookie fails)
+    expect(await limiter.isLimited(event)).toEqual(true); // 3 1 6 (Cookie fails)
 
     event.cookies.delete('testcookie');
 
-    expect(await limiter.check(event)).toEqual(true); //   1 2 7
-    expect(await limiter.check(event)).toEqual(true); //   2 3 8
-    expect(await limiter.check(event)).toEqual(false); //  3 3 8 (Cookie fails)
+    expect(await limiter.isLimited(event)).toEqual(false); //   1 2 7
+    expect(await limiter.isLimited(event)).toEqual(false); //   2 3 8
+    expect(await limiter.isLimited(event)).toEqual(true); //  3 3 8 (Cookie fails)
 
     event.cookies.delete('testcookie');
 
-    expect(await limiter.check(event)).toEqual(true); //   1 4 9
-    expect(await limiter.check(event)).toEqual(true); //   2 5 10
-    expect(await limiter.check(event)).toEqual(false); //  3 5 10 (Cookie fails)
+    expect(await limiter.isLimited(event)).toEqual(false); //   1 4 9
+    expect(await limiter.isLimited(event)).toEqual(false); //   2 5 10
+    expect(await limiter.isLimited(event)).toEqual(true); //  3 5 10 (Cookie fails)
 
     event.cookies.delete('testcookie');
 
-    expect(await limiter.check(event)).toEqual(true); //  1 6 10 (UA fails)
+    expect(await limiter.isLimited(event)).toEqual(false); //  1 6 10 (UA fails)
 
     event.request.headers.set('User-Agent', 'Safari');
 
-    expect(await limiter.check(event)).toEqual(false); //  2 1 11 (IP fails)
-    expect(await limiter.check(event)).toEqual(false); //  3 1 11 (UA fails)
+    expect(await limiter.isLimited(event)).toEqual(true); //  2 1 11 (IP fails)
+    expect(await limiter.isLimited(event)).toEqual(true); //  3 1 11 (UA fails)
 
     await delay(1);
 
-    expect(await limiter.check(event)).toEqual(true); //  1 1 1
-    expect(await limiter.check(event)).toEqual(true); //  2 2 2
-    expect(await limiter.check(event)).toEqual(false); // 3 3 3 (Cookie fails)
+    expect(await limiter.isLimited(event)).toEqual(false); //  1 1 1
+    expect(await limiter.isLimited(event)).toEqual(false); //  2 2 2
+    expect(await limiter.isLimited(event)).toEqual(true); // 3 3 3 (Cookie fails)
 
     expect(limits).toEqual(new Array(10).fill('rate'));
   });
