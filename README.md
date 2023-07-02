@@ -39,7 +39,7 @@ Implement the `RateLimiterPlugin` interface:
 ```ts
 interface RateLimiterPlugin {
   hash: (event: RequestEvent) => Promise<string | boolean>;
-  readonly rate: Rate;
+  get rate(): Rate;
 }
 ```
 

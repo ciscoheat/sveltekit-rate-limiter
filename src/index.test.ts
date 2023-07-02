@@ -1,4 +1,4 @@
-import { RateLimiter } from '$lib/rateLimiter';
+import { RateLimiter } from '$lib/server';
 import type { RequestEvent } from '@sveltejs/kit';
 import { describe, it, expect } from 'vitest';
 import { mock } from 'vitest-mock-extended';

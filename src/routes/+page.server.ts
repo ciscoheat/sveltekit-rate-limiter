@@ -1,4 +1,4 @@
-import { RateLimiter, type Rate } from '$lib';
+import { RateLimiter, type Rate } from '$lib/server';
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
