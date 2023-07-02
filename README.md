@@ -5,7 +5,7 @@ A modular rate limiter for password resets, account registration, etc. Use in yo
 Uses an in-memory cache, but can be swapped for something else. Same for limiters, which are plugins. See the [source file](https://github.com/ciscoheat/sveltekit-rate-limiter/blob/main/src/lib/rateLimiter.ts) for interfaces.
 
 ```ts
-import { RateLimiter } from 'sveltekit-rate-limiter';
+import { RateLimiter } from 'sveltekit-rate-limiter/server';
 
 const limiter = new RateLimiter({
   rates: {
@@ -49,7 +49,7 @@ Here's the source for the IP + User Agent limiter, as an example:
 
 ```ts
 import type { RequestEvent } from '@sveltejs/kit';
-import type { Rate, RateLimiterPlugin } from 'sveltekit-rate-limiter';
+import type { Rate, RateLimiterPlugin } from 'sveltekit-rate-limiter/server';
 
 class IPUserAgentRateLimiter implements RateLimiterPlugin {
   readonly rate: Rate;
@@ -69,7 +69,7 @@ class IPUserAgentRateLimiter implements RateLimiterPlugin {
 Add the limiter to `options.plugins` to use it.
 
 ```ts
-import { RateLimiter } from 'sveltekit-rate-limiter';
+import { RateLimiter } from 'sveltekit-rate-limiter/server';
 
 const limiter = new RateLimiter({
   plugins: [new CustomLimiter([5, 'm'])]
