@@ -5,6 +5,7 @@ A modular rate limiter for password resets, account registration, etc. Use in yo
 Uses an in-memory cache, but can be swapped for something else. Same for limiters, which are plugins. See the [source file](https://github.com/ciscoheat/sveltekit-rate-limiter/blob/main/src/lib/rateLimiter.ts) for interfaces.
 
 ```ts
+import { error } from '@sveltejs/kit';
 import { RateLimiter } from 'sveltekit-rate-limiter/server';
 
 const limiter = new RateLimiter({
@@ -27,7 +28,7 @@ export const load = async (event) => {
 
 export const actions = {
   default: async (event) => {
-    if (await limiter.isLimited(event)) return fail(429);
+    if (await limiter.isLimited(event)) throw error(429);
   }
 };
 ```
