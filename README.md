@@ -44,9 +44,14 @@ interface RateLimiterPlugin {
 }
 ```
 
-In `hash`, return a string based on a `RequestEvent`, which will be counted and checked against the rate, or a boolean to make the request fail (`false`) or succeed (`true`) no matter the current rate. The string will be hashed later.
+In `hash`, return a string based on a `RequestEvent`, which will be counted and checked against the rate, or a boolean to make the request fail (`false`) or succeed (`true`) no matter the current rate.
 
-Here's the source for the IP + User Agent limiter, as an example:
+- The string will be hashed later, so you don't need to use any hash function.
+- The string cannot be empty, in that case an exception will be thrown.
+
+### Example
+
+Here's the source for the IP + User Agent limiter:
 
 ```ts
 import type { RequestEvent } from '@sveltejs/kit';
@@ -67,12 +72,13 @@ class IPUserAgentRateLimiter implements RateLimiterPlugin {
 }
 ```
 
-Add the limiter to `options.plugins` to use it.
+Add your limiter to `options.plugins` to use it.
 
 ```ts
 import { RateLimiter } from 'sveltekit-rate-limiter/server';
 
 const limiter = new RateLimiter({
   plugins: [new CustomLimiter([5, 'm'])]
+  // The built-in limiters can be added as well.
 });
 ```
