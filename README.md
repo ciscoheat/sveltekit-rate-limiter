@@ -2,7 +2,7 @@
 
 A modular rate limiter for password resets, account registration, etc. Use in your `page.server.ts` files, or `hooks.server.ts`.
 
-Uses an in-memory cache, but can be swapped for something else. Same for limiters, which are plugins. See the [source file](https://github.com/ciscoheat/sveltekit-rate-limiter/blob/main/src/lib/server/index.ts#L24-L33) for interfaces.
+Uses an in-memory cache ([@isaacs/ttlcache](https://www.npmjs.com/package/@isaacs/ttlcache)), but can be swapped for something else. Same for limiters, which are plugins. See the [source file](https://github.com/ciscoheat/sveltekit-rate-limiter/blob/main/src/lib/server/index.ts#L24-L33) for interfaces.
 
 ```ts
 import { error } from '@sveltejs/kit';
@@ -15,7 +15,7 @@ const limiter = new RateLimiter({
     cookie: {
       // Cookie limiter
       name: 'limiterid',
-      secret: 'SECRETKEY-SERVER-ONLY',
+      secret: 'SECRETKEY-SERVER-ONLY', // Use $env/static/private
       rate: [2, 'm'],
       preflight: true // Require preflight call (see load)
     }
@@ -23,6 +23,7 @@ const limiter = new RateLimiter({
 });
 
 export const load = async (event) => {
+  // Preflight: If not called before posting, request will be limited.
   limiter.cookieLimiter?.preflight(event);
 };
 
@@ -31,6 +32,18 @@ export const actions = {
     if (await limiter.isLimited(event)) throw error(429);
   }
 };
+```
+
+The limiters will be called in smallest unit order, so in the example above:
+
+```
+cookie (2/min) -> IPUA (5/min) -> IP(10/hour)
+```
+
+Valid units are, from smallest to largest:
+
+```
+'ms' | 's' | '15s' | '30s' | 'm' | '15m' | '30m' | 'h' | '2h' | '6h' | '12h' | 'd'
 ```
 
 ## Creating a custom limiter
