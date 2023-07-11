@@ -22,13 +22,12 @@ export type Rate = [number, RateUnit];
 ///// Interfaces /////////////////////////////////////////////////////////////
 
 export interface RateLimiterStore {
-  check: (hash: string, unit: RateUnit) => Promise<number>;
   add: (hash: string, unit: RateUnit) => Promise<number>;
   clear: () => Promise<void>;
 }
 
 export interface RateLimiterPlugin {
-  hash: (event: RequestEvent) => Promise<string | boolean>;
+  hash: (event: RequestEvent) => Promise<string | boolean | null>;
   get rate(): Rate;
 }
 
@@ -50,22 +49,18 @@ class TTLStore implements RateLimiterStore {
     });
   }
 
-  set(hash: string, rate: number, unit: RateUnit): number {
-    this.cache.set(hash, rate, { ttl: RateLimiter.TTLTime(unit) });
-    return rate;
-  }
-
   async clear() {
     return this.cache.clear();
   }
 
-  async check(hash: string) {
-    return this.cache.get(hash) ?? 0;
+  async add(hash: string, unit: RateUnit) {
+    const currentRate = this.cache.get(hash) ?? 0;
+    return this.set(hash, currentRate + 1, unit);
   }
 
-  async add(hash: string, unit: RateUnit) {
-    const currentRate = await this.check(hash);
-    return this.set(hash, currentRate + 1, unit);
+  private set(hash: string, rate: number, unit: RateUnit): number {
+    this.cache.set(hash, rate, { ttl: RateLimiter.TTLTime(unit) });
+    return rate;
   }
 }
 
@@ -167,20 +162,20 @@ class CookieRateLimiter implements RateLimiterPlugin {
 
 ///// Main class //////////////////////////////////////////////////////////////
 
-export type RateLimiterOptions = {
-  plugins?: RateLimiterPlugin[];
-  store?: RateLimiterStore;
-  maxItems?: number;
-  onLimited?: (
+export type RateLimiterOptions = Partial<{
+  plugins: RateLimiterPlugin[];
+  store: RateLimiterStore;
+  maxItems: number;
+  onLimited: (
     event: RequestEvent,
     reason: 'rate' | 'rejected'
   ) => Promise<void | boolean> | void | boolean;
-  rates?: {
+  rates: {
     IP?: Rate;
     IPUA?: Rate;
     cookie?: CookieRateLimiterOptions;
   };
-};
+}>;
 
 export class RateLimiter {
   private readonly store: RateLimiterStore;
@@ -225,6 +220,8 @@ export class RateLimiter {
         return true;
       } else if (id === true) {
         return false;
+      } else if (id === null) {
+        continue;
       }
 
       if (!id) {
@@ -249,7 +246,7 @@ export class RateLimiter {
   }
 
   constructor(options: RateLimiterOptions = {}) {
-    this.plugins = options.plugins ?? [];
+    this.plugins = [...(options.plugins ?? [])];
     this.onLimited = options.onLimited;
 
     if (options.rates?.IP)
