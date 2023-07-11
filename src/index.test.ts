@@ -1,10 +1,25 @@
 import { RateLimiter } from '$lib/server';
 import type { RequestEvent } from '@sveltejs/kit';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { mock } from 'vitest-mock-extended';
+import type { Rate, RateLimiterPlugin } from '$lib/server';
 
 async function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+class ShortCircuitPlugin implements RateLimiterPlugin {
+  readonly rate: Rate;
+  readonly value: boolean | null;
+
+  constructor(value: boolean | null, rate: Rate) {
+    this.rate = rate;
+    this.value = value;
+  }
+
+  async hash() {
+    return this.value ?? false;
+  }
 }
 
 function mockEvent(): Partial<RequestEvent> {
@@ -188,5 +203,67 @@ describe('Basic rate limiter', async () => {
     expect(await limiter.isLimited(event)).toEqual(true); // 3 3 3 (Cookie fails)
 
     expect(limits).toEqual(new Array(10).fill('rate'));
+  });
+
+  describe('Short-circuiting the plugin chain when a boolean is returned', () => {
+    let event: RequestEvent;
+    const limits: string[] = [];
+
+    beforeEach(() => {
+      limits.length = 0;
+      event = mockEvent() as RequestEvent;
+    });
+
+    it.only('should always allow the request when true is returned and the plugin is first in the chain', async () => {
+      const limiter = new RateLimiter({
+        plugins: [new ShortCircuitPlugin(true, [1, 'm'])],
+        rates: {
+          IP: [2, 'm']
+        }
+      });
+
+      expect(await limiter.isLimited(event)).toEqual(false);
+      expect(await limiter.isLimited(event)).toEqual(false);
+      expect(await limiter.isLimited(event)).toEqual(false);
+    });
+
+    it.only('should always deny the request when false is returned and the plugin is first in the chain', async () => {
+      const limiter = new RateLimiter({
+        plugins: [new ShortCircuitPlugin(false, [1, 'm'])],
+        rates: {
+          IP: [2, 'm']
+        }
+      });
+
+      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
+    });
+
+    it.only('should deny the request when it is returning false further down the chain, and the first plugin is ok', async () => {
+      const limiter = new RateLimiter({
+        plugins: [new ShortCircuitPlugin(false, [5, 'm'])],
+        rates: {
+          IP: [2, 'm']
+        }
+      });
+
+      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
+    });
+
+    it.only('should allow the request when it is returning true further down the chain, until the first plugin is limiting', async () => {
+      const limiter = new RateLimiter({
+        plugins: [new ShortCircuitPlugin(true, [5, 'm'])],
+        rates: {
+          IP: [2, 'm']
+        }
+      });
+
+      expect(await limiter.isLimited(event)).toEqual(false);
+      expect(await limiter.isLimited(event)).toEqual(false);
+      expect(await limiter.isLimited(event)).toEqual(true);
+    });
   });
 });
