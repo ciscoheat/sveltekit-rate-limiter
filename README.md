@@ -44,7 +44,7 @@ interface RateLimiterPlugin {
 }
 ```
 
-In `hash`, return a string based on a `RequestEvent`, which will be counted and checked against the rate, or a boolean to make the request fail (`false`) or succeed (`true`) no matter the current rate.
+In `hash`, return a string based on a `RequestEvent`, which will be counted and checked against the rate, or a boolean to short-circuit the plugin chain and make the request fail (`false`) or succeed (`true`) no matter the current rate.
 
 - The string will be hashed later, so you don't need to use any hash function.
 - The string cannot be empty, in that case an exception will be thrown.
