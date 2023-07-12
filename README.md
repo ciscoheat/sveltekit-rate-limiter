@@ -104,7 +104,7 @@ class IPUserAgentRateLimiter implements RateLimiterPlugin {
 }
 ```
 
-Add your limiter to `options.plugins` to use it.
+Add your limiter to the `plugins` option to use it.
 
 ```ts
 import { RateLimiter } from 'sveltekit-rate-limiter/server';
