@@ -42,6 +42,7 @@ export const load = async (event) => {
 
 export const actions = {
   default: async (event) => {
+    // Every call to isLimited counts as a hit towards the rate limit for the event.
     if (await limiter.isLimited(event)) throw error(429);
   }
 };
