@@ -4,6 +4,16 @@ A modular rate limiter for password resets, account registration, etc. Use in yo
 
 Uses an in-memory cache ([@isaacs/ttlcache](https://www.npmjs.com/package/@isaacs/ttlcache)), but can be swapped for something else. Same for limiters, which are plugins. The [source file](https://github.com/ciscoheat/sveltekit-rate-limiter/blob/main/src/lib/server/index.ts#L24-L32) lists both interfaces.
 
+## Installation
+
+```
+npm i -D sveltekit-rate-limiter
+```
+
+```
+pnpm i -D sveltekit-rate-limiter
+```
+
 ## How to use
 
 ```ts
