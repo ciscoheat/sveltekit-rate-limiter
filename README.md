@@ -4,6 +4,16 @@ A modular rate limiter for password resets, account registration, etc. Use in yo
 
 Uses an in-memory cache ([@isaacs/ttlcache](https://www.npmjs.com/package/@isaacs/ttlcache)), but can be swapped for something else. Same for limiters, which are plugins. The [source file](https://github.com/ciscoheat/sveltekit-rate-limiter/blob/main/src/lib/server/index.ts#L24-L32) lists both interfaces.
 
+## Installation
+
+```
+npm i -D sveltekit-rate-limiter
+```
+
+```
+pnpm i -D sveltekit-rate-limiter
+```
+
 ## How to use
 
 ```ts
@@ -32,6 +42,7 @@ export const load = async (event) => {
 
 export const actions = {
   default: async (event) => {
+    // Every call to isLimited counts as a hit towards the rate limit for the event.
     if (await limiter.isLimited(event)) throw error(429);
   }
 };
@@ -94,7 +105,7 @@ class IPUserAgentRateLimiter implements RateLimiterPlugin {
 }
 ```
 
-Add your limiter to `options.plugins` to use it.
+Add your limiter to the `plugins` option to use it.
 
 ```ts
 import { RateLimiter } from 'sveltekit-rate-limiter/server';
