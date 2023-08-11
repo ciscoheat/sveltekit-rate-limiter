@@ -210,6 +210,7 @@ export class RateLimiter {
    * @returns {Promise<boolean>} true if request is limited, false otherwise
    */
   async isLimited(event: RequestEvent): Promise<boolean> {
+    let indeterminate = false;
     for (const plugin of this.plugins) {
       const id = await plugin.hash(event);
       if (id === false) {
@@ -221,7 +222,10 @@ export class RateLimiter {
       } else if (id === true) {
         return false;
       } else if (id === null) {
+        indeterminate = true;
         continue;
+      } else {
+        indeterminate = false;
       }
 
       if (!id) {
@@ -242,7 +246,7 @@ export class RateLimiter {
       }
     }
 
-    return false;
+    return indeterminate;
   }
 
   constructor(options: RateLimiterOptions = {}) {

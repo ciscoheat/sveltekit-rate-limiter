@@ -266,7 +266,7 @@ describe('Basic rate limiter', async () => {
       expect(await limiter.isLimited(event)).toEqual(true);
     });
 
-    it('should deny the request when it is returning null further down the chain, until any other plugin is limiting', async () => {
+    it('should allow the request when a plugin returns null early in the chain, until any other plugin is limiting', async () => {
       const limiter = new RateLimiter({
         plugins: [new ShortCircuitPlugin(null, [3, 'm'])],
         rates: {
@@ -279,6 +279,38 @@ describe('Basic rate limiter', async () => {
       expect(await limiter.isLimited(event)).toEqual(false);
       expect(await limiter.isLimited(event)).toEqual(false);
       expect(await limiter.isLimited(event)).toEqual(false);
+      expect(await limiter.isLimited(event)).toEqual(true);
+    });
+
+    it('should deny the request when a plugin returns null last in chain.', async () => {
+      const limiter = new RateLimiter({
+        plugins: [new ShortCircuitPlugin(null, [5, 'm'])],
+        rates: {
+          IP: [3, 'm']
+        }
+      });
+
+      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
+    });
+
+    it('should deny the request when null is returned from all plugins', async () => {
+      const limiter = new RateLimiter({
+        plugins: [
+          new ShortCircuitPlugin(null, [3, 'm']),
+          new ShortCircuitPlugin(null, [5, 'm'])
+        ]
+      });
+
+      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
       expect(await limiter.isLimited(event)).toEqual(true);
     });
   });
