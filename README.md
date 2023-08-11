@@ -27,16 +27,18 @@ const limiter = new RateLimiter({
     IPUA: [5, 'm'], // IP + User Agent limiter
     cookie: {
       // Cookie limiter
-      name: 'limiterid',
+      name: 'limiterid', // Unique cookie name for this limiter
       secret: 'SECRETKEY-SERVER-ONLY', // Use $env/static/private
       rate: [2, 'm'],
-      preflight: true // Require preflight call (see load)
+      preflight: true // Require preflight call (see load function)
     }
   }
 });
 
 export const load = async (event) => {
-  // Preflight: If not called before posting, request will be limited.
+  // Preflight prevents direct posting.
+  // If preflight option is true and this function isn't called
+  // before posting, request will be limited:
   limiter.cookieLimiter?.preflight(event);
 };
 
