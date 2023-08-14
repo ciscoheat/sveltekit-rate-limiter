@@ -31,39 +31,6 @@ export interface RateLimiterPlugin {
   get rate(): Rate;
 }
 
-///// Store ///////////////////////////////////////////////////////////////////
-
-class TTLStore implements RateLimiterStore {
-  private cache: TTLCache<string, number>;
-
-  constructor(maxTTL: number, maxItems = Infinity) {
-    this.cache = new TTLCache({
-      ttl: maxTTL,
-      max: maxItems,
-      noUpdateTTL: true
-      /*
-			dispose(value, key, reason) {
-				console.log('TTLStore ~ dispose', value, key, reason);
-			}
-      */
-    });
-  }
-
-  async clear() {
-    return this.cache.clear();
-  }
-
-  async add(hash: string, unit: RateUnit) {
-    const currentRate = this.cache.get(hash) ?? 0;
-    return this.set(hash, currentRate + 1, unit);
-  }
-
-  private set(hash: string, rate: number, unit: RateUnit): number {
-    this.cache.set(hash, rate, { ttl: RateLimiter.TTLTime(unit) });
-    return rate;
-  }
-}
-
 ///// Plugins /////////////////////////////////////////////////////////////////
 
 class IPRateLimiter implements RateLimiterPlugin {
@@ -210,17 +177,37 @@ export class RateLimiter {
    * @returns {Promise<boolean>} true if request is limited, false otherwise
    */
   async isLimited(event: RequestEvent): Promise<boolean> {
+    return (await this._isLimited(event)).limited;
+  }
+
+  /**
+   * Clear all rate limits.
+   */
+  async clear(): Promise<void> {
+    return await this.store.clear();
+  }
+
+  /**
+   * Check if a request event is rate limited.
+   * @param {RequestEvent} event
+   * @returns {Promise<boolean>} true if request is limited, false otherwise
+   */
+  protected async _isLimited(
+    event: RequestEvent
+  ): Promise<{ limited: boolean; hash: string | null; unit: RateUnit }> {
     let indeterminate = false;
+
     for (const plugin of this.plugins) {
       const id = await plugin.hash(event);
       if (id === false) {
         if (this.onLimited) {
           const status = await this.onLimited(event, 'rejected');
-          if (status === true) return false;
+          if (status === true)
+            return { limited: false, hash: null, unit: plugin.rate[1] };
         }
-        return true;
+        return { limited: true, hash: null, unit: plugin.rate[1] };
       } else if (id === true) {
-        return false;
+        return { limited: false, hash: null, unit: plugin.rate[1] };
       } else if (id === null) {
         indeterminate = true;
         continue;
@@ -235,18 +222,23 @@ export class RateLimiter {
       }
 
       const hash = RateLimiter.hash(id);
-
       const rate = await this.store.add(hash, plugin.rate[1]);
+
       if (rate > plugin.rate[0]) {
         if (this.onLimited) {
           const status = await this.onLimited(event, 'rate');
-          if (status === true) return false;
+          if (status === true)
+            return { limited: false, hash, unit: plugin.rate[1] };
         }
-        return true;
+        return { limited: true, hash, unit: plugin.rate[1] };
       }
     }
 
-    return indeterminate;
+    return {
+      limited: indeterminate,
+      hash: null,
+      unit: this.plugins[this.plugins.length - 1].rate[1]
+    };
   }
 
   constructor(options: RateLimiterOptions = {}) {
@@ -282,5 +274,118 @@ export class RateLimiter {
     }, 0);
 
     this.store = options.store ?? new TTLStore(maxTTL, options.maxItems);
+  }
+}
+
+export class RetryAfterRateLimiter extends RateLimiter {
+  private readonly retryAfter: RateLimiterStore;
+
+  constructor(
+    options: RateLimiterOptions = {},
+    retryAfterStore?: RateLimiterStore
+  ) {
+    super(options);
+    this.retryAfter = retryAfterStore ?? new RetryAfterStore();
+  }
+
+  private static toSeconds(rateMs: number) {
+    return Math.max(0, Math.floor(rateMs / 1000));
+  }
+
+  private static unitToSeconds(unit: RateUnit) {
+    return RetryAfterRateLimiter.toSeconds(RateLimiter.TTLTime(unit));
+  }
+
+  /**
+   * Clear all rate limits.
+   */
+  async clear(): Promise<void> {
+    await this.retryAfter.clear();
+    return await super.clear();
+  }
+
+  /**
+   * Check if a request event is rate limited.
+   * @param {RequestEvent} event
+   * @returns {Promise<limited: boolean, retryAfter: number>} Rate limit status for the event.
+   */
+  async check(
+    event: RequestEvent
+  ): Promise<{ limited: boolean; retryAfter: number }> {
+    const result = await this._isLimited(event);
+
+    if (!result.limited) return { limited: false, retryAfter: 0 };
+
+    if (result.hash === null) {
+      return {
+        limited: true,
+        retryAfter: RetryAfterRateLimiter.unitToSeconds(result.unit)
+      };
+    }
+
+    const retryAfter = RetryAfterRateLimiter.toSeconds(
+      (await this.retryAfter.add(result.hash, result.unit)) - Date.now()
+    );
+
+    return { limited: true, retryAfter };
+  }
+}
+
+///// Stores ///////////////////////////////////////////////////////////////////
+
+class TTLStore implements RateLimiterStore {
+  private cache: TTLCache<string, number>;
+
+  constructor(maxTTL: number, maxItems = Infinity) {
+    this.cache = new TTLCache({
+      ttl: maxTTL,
+      max: maxItems,
+      noUpdateTTL: true
+      /*
+			dispose(value, key, reason) {
+				console.log('TTLStore ~ dispose', value, key, reason);
+			}
+      */
+    });
+  }
+
+  async clear() {
+    return this.cache.clear();
+  }
+
+  async add(hash: string, unit: RateUnit) {
+    const currentRate = this.cache.get(hash) ?? 0;
+    return this.set(hash, currentRate + 1, unit);
+  }
+
+  private set(hash: string, rate: number, unit: RateUnit): number {
+    this.cache.set(hash, rate, { ttl: RateLimiter.TTLTime(unit) });
+    return rate;
+  }
+}
+
+class RetryAfterStore implements RateLimiterStore {
+  private cache: TTLCache<string, number>;
+
+  constructor(maxItems = Infinity) {
+    this.cache = new TTLCache({
+      max: maxItems,
+      noUpdateTTL: true
+    });
+  }
+
+  async clear() {
+    return this.cache.clear();
+  }
+
+  async add(hash: string, unit: RateUnit) {
+    const currentRate = this.cache.get(hash);
+    if (currentRate) return this.cache.get(hash) ?? 0;
+
+    const ttl = RateLimiter.TTLTime(unit);
+    const retryAfter = Date.now() + ttl;
+    this.cache.set(hash, retryAfter, { ttl });
+
+    return retryAfter;
   }
 }

@@ -1,4 +1,4 @@
-import { RateLimiter } from '$lib/server';
+import { RateLimiter, RetryAfterRateLimiter } from '$lib/server';
 import type { RequestEvent } from '@sveltejs/kit';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { mock } from 'vitest-mock-extended';
@@ -313,5 +313,84 @@ describe('Basic rate limiter', async () => {
       expect(await limiter.isLimited(event)).toEqual(true);
       expect(await limiter.isLimited(event)).toEqual(true);
     });
+  });
+});
+
+describe('Retry-After rate limiter', () => {
+  it('should return retry-after information together with the limited status', async () => {
+    const event = mockEvent() as RequestEvent;
+    const limiter = new RetryAfterRateLimiter({
+      rates: {
+        IPUA: [3, 's']
+      }
+    });
+
+    let status = await limiter.check(event);
+    expect(status).toEqual({ limited: false, retryAfter: 0 });
+
+    status = await limiter.check(event);
+    expect(status).toEqual({ limited: false, retryAfter: 0 });
+
+    status = await limiter.check(event);
+    expect(status).toEqual({ limited: false, retryAfter: 0 });
+
+    status = await limiter.check(event);
+    expect(status).toEqual({ limited: true, retryAfter: 1 });
+
+    await delay(1100);
+
+    status = await limiter.check(event);
+    expect(status).toEqual({ limited: false, retryAfter: 0 });
+  });
+
+  it('should work for multiple rate limiters', async () => {
+    const event = mockEvent() as RequestEvent;
+    const limiter = new RetryAfterRateLimiter({
+      rates: {
+        IP: [5, 'm'],
+        IPUA: [3, 's']
+      }
+    });
+
+    event.request.headers.set('User-Agent', 'Safari 1');
+
+    let status = await limiter.check(event);
+    expect(status).toEqual({ limited: false, retryAfter: 0 });
+
+    status = await limiter.check(event);
+    expect(status).toEqual({ limited: false, retryAfter: 0 });
+
+    status = await limiter.check(event);
+    expect(status).toEqual({ limited: false, retryAfter: 0 });
+
+    status = await limiter.check(event);
+    expect(status).toEqual({ limited: true, retryAfter: 1 });
+
+    event.request.headers.set('User-Agent', 'Safari 2');
+
+    status = await limiter.check(event);
+    expect(status).toEqual({ limited: false, retryAfter: 0 });
+
+    status = await limiter.check(event);
+    expect(status).toEqual({ limited: false, retryAfter: 0 });
+
+    status = await limiter.check(event);
+    expect(status).toEqual({ limited: true, retryAfter: 60 });
+
+    event.request.headers.set('User-Agent', 'Safari 3');
+
+    status = await limiter.check(event);
+    expect(status).toEqual({ limited: true, retryAfter: 60 });
+
+    await delay(1100);
+
+    status = await limiter.check(event);
+    expect(status.limited).toEqual(true);
+    expect(status.retryAfter).toBeGreaterThanOrEqual(58);
+
+    await limiter.clear();
+
+    status = await limiter.check(event);
+    expect(status).toEqual({ limited: false, retryAfter: 0 });
   });
 });

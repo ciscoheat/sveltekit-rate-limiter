@@ -8,8 +8,10 @@
 <h1>Try the rate limiter</h1>
 
 {#if form}
-  <h3 class:limited={!form.status}>
-    {form.status ? 'OK' : 'You are rate limited.'}
+  <h3 class:limited={form.retryAfter}>
+    {form.retryAfter
+      ? `You are rate limited, retry in ${form.retryAfter} seconds.`
+      : 'OK'}
   </h3>
 {/if}
 

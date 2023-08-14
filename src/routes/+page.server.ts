@@ -1,4 +1,4 @@
-import { RateLimiter, type Rate } from '$lib/server';
+import { type Rate, RetryAfterRateLimiter } from '$lib/server';
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
@@ -7,7 +7,7 @@ const rates = {
   IPUA: [1, '15s'] satisfies Rate
 };
 
-const limiter = new RateLimiter({ rates });
+const limiter = new RetryAfterRateLimiter({ rates });
 
 export const load = (async () => {
   return { rates };
@@ -15,9 +15,13 @@ export const load = (async () => {
 
 export const actions = {
   default: async (event) => {
-    if (await limiter.isLimited(event)) {
-      return fail(429, { status: false });
+    const status = await limiter.check(event);
+    if (status.limited) {
+      event.setHeaders({
+        'Retry-After': status.retryAfter.toString()
+      });
+      return fail(429, { retryAfter: status.retryAfter });
     }
-    return { status: true };
+    return { retryAfter: 0 };
   }
 };

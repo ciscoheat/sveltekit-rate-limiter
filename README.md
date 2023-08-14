@@ -62,6 +62,41 @@ Valid units are, from smallest to largest:
 'ms' | 's' | '15s' | '30s' | 'm' | '15m' | '30m' | 'h' | '2h' | '6h' | '12h' | 'd'
 ```
 
+## Retry-After limiter
+
+There is a version of the rate limiter that will return [Retry-After](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After) information, the number of seconds before the request should be attempted again. It's used in a similar way:
+
+```ts
+import { error } from '@sveltejs/kit';
+import { RetryAfterRateLimiter } from 'sveltekit-rate-limiter/server';
+
+const limiter = new RetryAfterRateLimiter({
+  rates: {
+    IP: [10, 'h']
+    IPUA: [5, 'm']
+  }
+});
+
+export const actions = {
+  default: async (event) => {
+    const status = await limiter.check(event);
+
+    if(status.limited) {
+      event.setHeaders({
+        'Retry-After': status.retryAfter.toString()
+      });
+      return fail(429);
+    }
+  }
+};
+```
+
+A custom store for the `RetryAfterRateLimiter` can also be used, in which the second argument to the constructor should be a [RateLimiterStore](https://github.com/ciscoheat/sveltekit-rate-limiter/blob/main/src/lib/server/index.ts#L24) that returns a unix timestamp describing when the request should be reattempted, based on the unit sent to it.
+
+## Clearing the limits
+
+Clearing all rate limits can be done by calling the `clear` method of the rate limiter object.
+
 ## Creating a custom limiter
 
 Implement the `RateLimiterPlugin` interface:
