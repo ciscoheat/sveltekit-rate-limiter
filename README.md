@@ -101,7 +101,7 @@ import { RetryAfterRateLimiter } from 'sveltekit-rate-limiter/server';
 
 const limiter = new RetryAfterRateLimiter({
   rates: {
-    IP: [10, 'h']
+    IP: [10, 'h'],
     IPUA: [5, 'm']
   }
 });
@@ -110,7 +110,7 @@ export const actions = {
   default: async (event) => {
     const status = await limiter.check(event);
 
-    if(status.limited) {
+    if (status.limited) {
       event.setHeaders({
         'Retry-After': status.retryAfter.toString()
       });
