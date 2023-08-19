@@ -119,7 +119,7 @@ describe('Basic rate limiter', async () => {
 
     expect(await limiter.isLimited(event)).toEqual(true);
 
-    limiter.cookieLimiter?.preflight(event);
+    await limiter.cookieLimiter?.preflight(event);
 
     expect(await limiter.isLimited(event)).toEqual(false);
     expect(await limiter.isLimited(event)).toEqual(false);
@@ -153,7 +153,7 @@ describe('Basic rate limiter', async () => {
 
     const event = mockEvent() as RequestEvent;
 
-    limiter.cookieLimiter?.preflight(event);
+    await limiter.cookieLimiter?.preflight(event);
 
     expect(await limiter.isLimited(event)).toEqual(false); //  1 1 1
     expect(await limiter.isLimited(event)).toEqual(false); //  2 2 2
@@ -375,18 +375,23 @@ describe('Retry-After rate limiter', () => {
     expect(status).toEqual({ limited: false, retryAfter: 0 });
 
     status = await limiter.check(event);
-    expect(status).toEqual({ limited: true, retryAfter: 60 });
+    expect(status.limited).toEqual(true);
+    expect(status.retryAfter).toBeGreaterThanOrEqual(59);
+    expect(status.retryAfter).toBeLessThanOrEqual(60);
 
     event.request.headers.set('User-Agent', 'Safari 3');
 
     status = await limiter.check(event);
-    expect(status).toEqual({ limited: true, retryAfter: 60 });
+    expect(status.limited).toEqual(true);
+    expect(status.retryAfter).toBeGreaterThanOrEqual(59);
+    expect(status.retryAfter).toBeLessThanOrEqual(60);
 
     await delay(1100);
 
     status = await limiter.check(event);
     expect(status.limited).toEqual(true);
     expect(status.retryAfter).toBeGreaterThanOrEqual(58);
+    expect(status.retryAfter).toBeLessThanOrEqual(59);
 
     await limiter.clear();
 

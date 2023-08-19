@@ -1,5 +1,4 @@
-import type { RequestEvent } from '@sveltejs/kit';
-import crypto from 'crypto';
+import type { Cookies, RequestEvent } from '@sveltejs/kit';
 import { nanoid } from 'nanoid';
 import TTLCache from '@isaacs/ttlcache';
 
@@ -59,60 +58,70 @@ class IPUserAgentRateLimiter implements RateLimiterPlugin {
   }
 }
 
+type CookieSerializeOptions = NonNullable<Parameters<Cookies['set']>[2]>;
+
 type CookieRateLimiterOptions = {
   name: string;
   secret: string;
   rate: Rate;
   preflight: boolean;
-  maxAge?: number;
+  serializeOptions?: CookieSerializeOptions;
+  hashFunction?: HashFunction;
 };
 
 class CookieRateLimiter implements RateLimiterPlugin {
   readonly rate: Rate;
+  private readonly cookieOptions: CookieSerializeOptions;
   private readonly secret: string;
   private readonly requirePreflight: boolean;
   private readonly cookieId: string;
-  private readonly maxAge: number;
+  private readonly hashFunction: HashFunction;
 
   constructor(options: CookieRateLimiterOptions) {
     this.cookieId = options.name;
     this.secret = options.secret;
     this.rate = options.rate;
     this.requirePreflight = options.preflight;
-    this.maxAge = options.maxAge ?? 60 * 60 * 24 * 7;
+    this.hashFunction = options.hashFunction ?? defaultHashFunction;
+
+    this.cookieOptions = {
+      path: '/',
+      httpOnly: true,
+      maxAge: 60 * 60 * 24 * 7,
+      sameSite: 'strict',
+      ...options.serializeOptions
+    };
   }
 
   async hash(event: RequestEvent) {
-    const currentId = this.userIdFromCookie(
+    const currentId = await this.userIdFromCookie(
       event.cookies.get(this.cookieId),
       event
     );
     return currentId ? currentId : false;
   }
 
-  preflight(event: RequestEvent): string {
+  async preflight(event: RequestEvent): Promise<string> {
     const data = event.cookies.get(this.cookieId);
     if (data) {
-      const userId = this.userIdFromCookie(data, event);
+      const userId = await this.userIdFromCookie(data, event);
       if (userId) return userId;
     }
+
     const userId = nanoid();
+
     event.cookies.set(
       this.cookieId,
-      userId + ';' + RateLimiter.hash(this.secret + userId),
-      {
-        path: '/',
-        httpOnly: true,
-        maxAge: this.maxAge
-      }
+      userId + ';' + (await this.hashFunction(this.secret + userId)),
+      this.cookieOptions
     );
     return userId;
   }
 
-  private userIdFromCookie(
+  private async userIdFromCookie(
     cookie: string | undefined,
     event: RequestEvent
-  ): string | null {
+  ): Promise<string | null> {
     const empty = () => {
       return this.requirePreflight ? null : this.preflight(event);
     };
@@ -120,11 +129,39 @@ class CookieRateLimiter implements RateLimiterPlugin {
     if (!cookie) return empty();
     const [userId, secretHash] = cookie.split(';');
     if (!userId || !secretHash) return empty();
-    if (RateLimiter.hash(this.secret + userId) != secretHash) {
+    if ((await this.hashFunction(this.secret + userId)) != secretHash) {
       return empty();
     }
     return userId;
   }
+}
+
+///// Hashing ///////////////////////////////////////////////////////
+
+type HashFunction = (input: string) => Promise<string>;
+
+let defaultHashFunction: HashFunction;
+
+if (globalThis?.crypto?.subtle) {
+  defaultHashFunction = _subtleSha256;
+} else {
+  import('crypto').then((crypto) => {
+    defaultHashFunction = (input: string) => {
+      return Promise.resolve(
+        crypto.createHash('sha256').update(input).digest('hex')
+      );
+    };
+  });
+}
+
+async function _subtleSha256(str: string) {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(str)
+  );
+  return [...new Uint8Array(digest)]
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 ///// Main class //////////////////////////////////////////////////////////////
@@ -142,18 +179,16 @@ export type RateLimiterOptions = Partial<{
     IPUA?: Rate;
     cookie?: CookieRateLimiterOptions;
   };
+  hashFunction: HashFunction;
 }>;
 
 export class RateLimiter {
   private readonly store: RateLimiterStore;
   private readonly plugins: RateLimiterPlugin[];
   private readonly onLimited: RateLimiterOptions['onLimited'] | undefined;
+  private readonly hashFunction: HashFunction;
 
   readonly cookieLimiter: CookieRateLimiter | undefined;
-
-  static hash(data: string): string {
-    return crypto.createHash('sha256').update(data).digest('hex');
-  }
 
   static TTLTime(unit: RateUnit) {
     if (unit == 'ms') return 1;
@@ -221,7 +256,7 @@ export class RateLimiter {
         );
       }
 
-      const hash = RateLimiter.hash(id);
+      const hash = await this.hashFunction(id);
       const rate = await this.store.add(hash, plugin.rate[1]);
 
       if (rate > plugin.rate[0]) {
@@ -244,6 +279,12 @@ export class RateLimiter {
   constructor(options: RateLimiterOptions = {}) {
     this.plugins = [...(options.plugins ?? [])];
     this.onLimited = options.onLimited;
+    this.hashFunction = options.hashFunction ?? defaultHashFunction;
+
+    if (!this.hashFunction)
+      throw new Error(
+        'No RateLimiter hash function found. Please set one with the hashFunction option.'
+      );
 
     if (options.rates?.IP)
       this.plugins.push(new IPRateLimiter(options.rates.IP));
@@ -253,7 +294,10 @@ export class RateLimiter {
 
     if (options.rates?.cookie) {
       this.plugins.push(
-        (this.cookieLimiter = new CookieRateLimiter(options.rates.cookie))
+        (this.cookieLimiter = new CookieRateLimiter({
+          hashFunction: this.hashFunction,
+          ...options.rates.cookie
+        }))
       );
     }
 
@@ -341,11 +385,6 @@ class TTLStore implements RateLimiterStore {
       ttl: maxTTL,
       max: maxItems,
       noUpdateTTL: true
-      /*
-			dispose(value, key, reason) {
-				console.log('TTLStore ~ dispose', value, key, reason);
-			}
-      */
     });
   }
 

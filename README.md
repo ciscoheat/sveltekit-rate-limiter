@@ -39,7 +39,7 @@ export const load = async (event) => {
   // Preflight prevents direct posting.
   // If preflight option is true and this function isn't called
   // before posting, request will be limited:
-  limiter.cookieLimiter?.preflight(event);
+  await limiter.cookieLimiter?.preflight(event);
 };
 
 export const actions = {
@@ -50,11 +50,40 @@ export const actions = {
 };
 ```
 
+## Call order for limiters
+
 The limiters will be called in smallest unit and rate order, so in the example above:
 
 ```
 cookie(2/min) → IPUA(5/min) → IP(10/hour)
 ```
+
+For four consecutive requests from the same source within one minute, the following will happen:
+
+| Request | Cookie    | IPUA  | IP    |
+| ------- | --------- | ----- | ----- |
+| 1       | Hit 1     | Hit 1 | Hit 1 |
+| 2       | Hit 2     | Hit 2 | Hit 2 |
+| 3       | **Limit** | -     | -     |
+| 4       | **Limit** | -     | -     |
+
+If the cookie is deleted but the User-Agent stays the same, the counter keeps going for the other limiters:
+
+| Request | Cookie    | IPUA  | IP    |
+| ------- | --------- | ----- | ----- |
+| 1       | Hit 1     | Hit 3 | Hit 3 |
+| 2       | Hit 2     | Hit 4 | Hit 4 |
+| 3       | **Limit** | -     | -     |
+
+If deleted one more time, the User-Agent limiter will reach its limit:
+
+| Request | Cookie    | IPUA      | IP    |
+| ------- | --------- | --------- | ----- |
+| 1       | Hit 1     | Hit 5     | Hit 5 |
+| 2       | Hit 2     | **Limit** | -     |
+| 3       | **Limit** | -         | -     |
+
+## Valid units
 
 Valid units are, from smallest to largest:
 

@@ -5,6 +5,21 @@ Headlines: Added, Changed, Deprecated, Removed, Fixed, Security
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2023-08-19
+
+### Changed
+
+- `limiter.preflight` is now async and must be awaited!
+- Cookie limiter options now takes a `serializeOptions`, that can be used for customizing the cookie.
+
+### Added
+
+- `hashFunction` option, for custom hashing. Defaults to Web Crypto API SHA-256, will fallback to NodeJS crypto if not available.
+
+## Fixed
+
+- Hash function is now compatible any environment that supports Web Crypto API, including Cloudflare workers.
+
 ## [0.3.5] - 2023-08-14
 
 ### Added
