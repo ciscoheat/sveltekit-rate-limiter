@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `hashFunction` option, for custom hashing. Defaults to Web Crypto API SHA-256, will fallback to NodeJS crypto if not available.
 
-## Fixed
+### Fixed
 
 - Hash function is now compatible any environment that supports Web Crypto API, including Cloudflare workers.
 
