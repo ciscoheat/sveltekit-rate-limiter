@@ -13,6 +13,9 @@ devDependencies:
   '@sveltejs/adapter-auto':
     specifier: ^2.1.0
     version: 2.1.0(@sveltejs/kit@1.22.5)
+  '@sveltejs/adapter-cloudflare':
+    specifier: ^2.3.2
+    version: 2.3.2(@sveltejs/kit@1.22.5)
   '@sveltejs/kit':
     specifier: ^1.22.5
     version: 1.22.5(svelte@4.1.2)(vite@4.4.9)
@@ -84,6 +87,10 @@ packages:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.3
       '@jridgewell/trace-mapping': 0.3.19
+    dev: true
+
+  /@cloudflare/workers-types@4.20230814.0:
+    resolution: {integrity: sha512-+jHiGjZg2UpULZSSHmHLqUG45TLg1s+uppSMlGvMn0u/xyFsRX9HX6b8Ydg/oHSp3jfSuPtX05GSvtgRAmrWTg==}
     dev: true
 
   /@esbuild/android-arm64@0.18.20:
@@ -419,6 +426,17 @@ packages:
     dependencies:
       '@sveltejs/kit': 1.22.5(svelte@4.1.2)(vite@4.4.9)
       import-meta-resolve: 3.0.0
+    dev: true
+
+  /@sveltejs/adapter-cloudflare@2.3.2(@sveltejs/kit@1.22.5):
+    resolution: {integrity: sha512-BpgFmVJInF2D0Uo41gJtvYyTiZ6P/xkfrQSqPHQOGYsjvFeW+1AjX/8MPIJ3VJyvbVgyRaVKMBsXWHADbAYatQ==}
+    peerDependencies:
+      '@sveltejs/kit': ^1.0.0
+    dependencies:
+      '@cloudflare/workers-types': 4.20230814.0
+      '@sveltejs/kit': 1.22.5(svelte@4.1.2)(vite@4.4.9)
+      esbuild: 0.18.20
+      worktop: 0.8.0-next.15
     dev: true
 
   /@sveltejs/kit@1.22.5(svelte@4.1.2)(vite@4.4.9):
@@ -2325,6 +2343,11 @@ packages:
       functions-have-names: 1.2.3
     dev: true
 
+  /regexparam@2.0.1:
+    resolution: {integrity: sha512-zRgSaYemnNYxUv+/5SeoHI0eJIgTL/A2pUtXUPLHQxUldagouJ9p+K6IbIZ/JiQuCEv2E2B1O11SjVQy3aMCkw==}
+    engines: {node: '>=8'}
+    dev: true
+
   /resolve-from@4.0.0:
     resolution: {integrity: sha512-pb/MYmXstAkysRFx8piNI1tGFNQIFA3vkE3Gq4EuA1dF6gHp/+vgZqsCGJapvy8N3Q+4o7FwvquPJcnZ7RYy4g==}
     engines: {node: '>=4'}
@@ -3084,6 +3107,14 @@ packages:
     dependencies:
       siginfo: 2.0.0
       stackback: 0.0.2
+    dev: true
+
+  /worktop@0.8.0-next.15:
+    resolution: {integrity: sha512-0ycNO52P6nVwsjr1y20zuf0nqJatAb8L7MODBfQIxbxndHV5O4s50oZZMHWhJG1RLpHwbK0Epq8aaQK4E2GlgQ==}
+    engines: {node: '>=12'}
+    dependencies:
+      mrmime: 1.0.1
+      regexparam: 2.0.1
     dev: true
 
   /wrappy@1.0.2:

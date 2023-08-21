@@ -56,6 +56,7 @@
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^2.1.0",
+    "@sveltejs/adapter-cloudflare": "^2.3.2",
     "@sveltejs/kit": "^1.22.5",
     "@sveltejs/package": "^2.2.1",
     "@typescript-eslint/eslint-plugin": "^5.62.0",

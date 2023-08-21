@@ -144,14 +144,6 @@ let defaultHashFunction: HashFunction;
 
 if (globalThis?.crypto?.subtle) {
   defaultHashFunction = _subtleSha256;
-} else {
-  import('crypto').then((crypto) => {
-    defaultHashFunction = (input: string) => {
-      return Promise.resolve(
-        crypto.createHash('sha256').update(input).digest('hex')
-      );
-    };
-  });
 }
 
 async function _subtleSha256(str: string) {
@@ -281,10 +273,11 @@ export class RateLimiter {
     this.onLimited = options.onLimited;
     this.hashFunction = options.hashFunction ?? defaultHashFunction;
 
-    if (!this.hashFunction)
+    if (!this.hashFunction) {
       throw new Error(
         'No RateLimiter hash function found. Please set one with the hashFunction option.'
       );
+    }
 
     if (options.rates?.IP)
       this.plugins.push(new IPRateLimiter(options.rates.IP));
