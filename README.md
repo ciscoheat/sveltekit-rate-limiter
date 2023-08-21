@@ -126,6 +126,18 @@ A custom store for the `RetryAfterRateLimiter` can also be used, in which the se
 
 Clearing all rate limits can be done by calling the `clear` method of the rate limiter object.
 
+## Custom hash function
+
+The default hash function is using `crypto.subtle` to generate a SHA-256 digest, but if isn't available in your environment, you can supply your own with the `hashFunction` option. Here's an example with the NodeJS `crypto` package:
+
+```ts
+import crypto from 'crypto';
+
+// (input: string) => Promise<string>
+const hashFunction = (input: string) =>
+  Promise.resolve(crypto.createHash('sha256').update(input).digest('hex'));
+```
+
 ## Creating a custom limiter
 
 Implement the `RateLimiterPlugin` interface:

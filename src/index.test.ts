@@ -3,6 +3,13 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { mock } from 'vitest-mock-extended';
 import type { Rate, RateLimiterPlugin } from '$lib/server';
+import crypto from 'crypto';
+
+const hashFunction = (input: string) => {
+  return Promise.resolve(
+    crypto.createHash('sha256').update(input).digest('hex')
+  );
+};
 
 async function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -58,6 +65,7 @@ function mockEvent(): Partial<RequestEvent> {
 describe('Basic rate limiter', async () => {
   it('should limit IP requests', async () => {
     const limiter = new RateLimiter({
+      hashFunction,
       rates: {
         IP: [2, 's']
       }
@@ -85,6 +93,7 @@ describe('Basic rate limiter', async () => {
 
   it('should limit IP + User Agent requests', async () => {
     const limiter = new RateLimiter({
+      hashFunction,
       rates: {
         IPUA: [2, 'ms']
       }
@@ -105,6 +114,7 @@ describe('Basic rate limiter', async () => {
 
   it('should limit cookie requests', async () => {
     const limiter = new RateLimiter({
+      hashFunction,
       rates: {
         cookie: {
           name: 'testcookie',
@@ -136,6 +146,7 @@ describe('Basic rate limiter', async () => {
     const limits: string[] = [];
 
     const limiter = new RateLimiter({
+      hashFunction,
       rates: {
         IP: [10, 'ms'],
         IPUA: [5, 'ms'],
@@ -216,6 +227,7 @@ describe('Basic rate limiter', async () => {
 
     it('should always allow the request when true is returned and the plugin is first in the chain', async () => {
       const limiter = new RateLimiter({
+        hashFunction,
         plugins: [new ShortCircuitPlugin(true, [1, 'm'])],
         rates: {
           IP: [2, 'm']
@@ -229,6 +241,7 @@ describe('Basic rate limiter', async () => {
 
     it('should always deny the request when false is returned and the plugin is first in the chain', async () => {
       const limiter = new RateLimiter({
+        hashFunction,
         plugins: [new ShortCircuitPlugin(false, [1, 'm'])],
         rates: {
           IP: [2, 'm']
@@ -242,6 +255,7 @@ describe('Basic rate limiter', async () => {
 
     it('should deny the request when it is returning false further down the chain, and the first plugin is ok', async () => {
       const limiter = new RateLimiter({
+        hashFunction,
         plugins: [new ShortCircuitPlugin(false, [5, 'm'])],
         rates: {
           IP: [2, 'm']
@@ -255,6 +269,7 @@ describe('Basic rate limiter', async () => {
 
     it('should allow the request when it is returning true further down the chain, until the first plugin is limiting', async () => {
       const limiter = new RateLimiter({
+        hashFunction,
         plugins: [new ShortCircuitPlugin(true, [5, 'm'])],
         rates: {
           IP: [2, 'm']
@@ -268,6 +283,7 @@ describe('Basic rate limiter', async () => {
 
     it('should allow the request when a plugin returns null early in the chain, until any other plugin is limiting', async () => {
       const limiter = new RateLimiter({
+        hashFunction,
         plugins: [new ShortCircuitPlugin(null, [3, 'm'])],
         rates: {
           IP: [5, 'm']
@@ -284,6 +300,7 @@ describe('Basic rate limiter', async () => {
 
     it('should deny the request when a plugin returns null last in chain.', async () => {
       const limiter = new RateLimiter({
+        hashFunction,
         plugins: [new ShortCircuitPlugin(null, [5, 'm'])],
         rates: {
           IP: [3, 'm']
@@ -300,6 +317,7 @@ describe('Basic rate limiter', async () => {
 
     it('should deny the request when null is returned from all plugins', async () => {
       const limiter = new RateLimiter({
+        hashFunction,
         plugins: [
           new ShortCircuitPlugin(null, [3, 'm']),
           new ShortCircuitPlugin(null, [5, 'm'])
@@ -320,6 +338,7 @@ describe('Retry-After rate limiter', () => {
   it('should return retry-after information together with the limited status', async () => {
     const event = mockEvent() as RequestEvent;
     const limiter = new RetryAfterRateLimiter({
+      hashFunction,
       rates: {
         IPUA: [3, 's']
       }
@@ -346,6 +365,7 @@ describe('Retry-After rate limiter', () => {
   it('should work for multiple rate limiters', async () => {
     const event = mockEvent() as RequestEvent;
     const limiter = new RetryAfterRateLimiter({
+      hashFunction,
       rates: {
         IP: [5, 'm'],
         IPUA: [3, 's']
