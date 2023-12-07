@@ -93,10 +93,10 @@ Valid units are, from smallest to largest:
 
 ## Retry-After limiter
 
-There is a version of the rate limiter that will return [Retry-After](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After) information, the number of seconds before the request should be attempted again. It's used in a similar way:
+There is a version of the rate limiter that will return [Retry-After](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After) information, the number of seconds before the request should be attempted again. This has been implemented in the `src/hooks.server.ts` file and instead of throwing an error code like other pages, we have to create a new response so that we can add the header.
 
 ```ts
-import { error } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit';
 import { RetryAfterRateLimiter } from 'sveltekit-rate-limiter/server';
 
 const limiter = new RetryAfterRateLimiter({
@@ -106,17 +106,20 @@ const limiter = new RetryAfterRateLimiter({
   }
 });
 
-export const actions = {
-  default: async (event) => {
-    const status = await limiter.check(event);
-
-    if (status.limited) {
-      event.setHeaders({
-        'Retry-After': status.retryAfter.toString()
-      });
-      return fail(429);
-    }
+export const handle: Handle = async ({ event, resolve }) => {
+  const status = await limiter.check(event);
+  if (status.limited) {
+    let response = new Response(
+      `You are being rate limited. Please try after ${status.retryAfter} seconds.`,
+      {
+        status: 429,
+        headers: { 'Retry-After': status.retryAfter.toString() }
+      }
+    );
+    return response;
   }
+  const response = await resolve(event);
+  return response;
 };
 ```
 
