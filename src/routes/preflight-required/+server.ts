@@ -20,7 +20,7 @@ export const GET: RequestHandler = async (event) => {
 
 export const POST: RequestHandler = async (event) => {
   if (await limiter.isLimited(event)) {
-    throw error(429);
+    error(429);
   }
   return json({ message: 'Not limited' });
 };
