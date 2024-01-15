@@ -183,18 +183,32 @@ export class RateLimiter {
   readonly cookieLimiter: CookieRateLimiter | undefined;
 
   static TTLTime(unit: RateUnit) {
-    if (unit == 'ms') return 1;
-    if (unit == 's') return 1000;
-    if (unit == 'm') return 60 * 1000;
-    if (unit == 'h') return 60 * 60 * 1000;
-    if (unit == '15s') return 15 * 1000;
-    if (unit == '30s') return 30 * 1000;
-    if (unit == '15m') return 15 * 60 * 1000;
-    if (unit == '30m') return 30 * 60 * 1000;
-    if (unit == '2h') return 2 * 60 * 60 * 1000;
-    if (unit == '6h') return 6 * 60 * 60 * 1000;
-    if (unit == '12h') return 12 * 60 * 60 * 1000;
-    if (unit == 'd') return 24 * 60 * 60 * 1000;
+    switch (unit) {
+      case 'ms':
+        return 1;
+      case 's':
+        return 1000;
+      case 'm':
+        return 60 * 1000;
+      case 'h':
+        return 60 * 60 * 1000;
+      case '15s':
+        return 15 * 1000;
+      case '30s':
+        return 30 * 1000;
+      case '15m':
+        return 15 * 60 * 1000;
+      case '30m':
+        return 30 * 60 * 1000;
+      case '2h':
+        return 2 * 60 * 60 * 1000;
+      case '6h':
+        return 6 * 60 * 60 * 1000;
+      case '12h':
+        return 12 * 60 * 60 * 1000;
+      case 'd':
+        return 24 * 60 * 60 * 1000;
+    }
     throw new Error('Invalid unit for TTLTime: ' + unit);
   }
 
@@ -222,7 +236,7 @@ export class RateLimiter {
   protected async _isLimited(
     event: RequestEvent
   ): Promise<{ limited: boolean; hash: string | null; unit: RateUnit }> {
-    let indeterminate = false;
+    let limited = false;
 
     for (const plugin of this.plugins) {
       const id = await plugin.hash(event);
@@ -236,10 +250,10 @@ export class RateLimiter {
       } else if (id === true) {
         return { limited: false, hash: null, unit: plugin.rate[1] };
       } else if (id === null) {
-        indeterminate = true;
+        limited = true;
         continue;
       } else {
-        indeterminate = false;
+        limited = false;
       }
 
       if (!id) {
@@ -262,7 +276,7 @@ export class RateLimiter {
     }
 
     return {
-      limited: indeterminate,
+      limited,
       hash: null,
       unit: this.plugins[this.plugins.length - 1].rate[1]
     };
