@@ -86,10 +86,12 @@ If deleted one more time, the User-Agent limiter will reach its limit:
 Valid units are, from smallest to largest:
 
 ```
-'ms' | 's' | '15s' | '30s' | 'm' | '15m' | '30m' | 'h' | '2h' | '6h' | '12h' | 'd'
+'100ms' | '250ms' | '500ms'
+'s' | '2s' | '5s' | '10s' | '15s' | '30s' | '45s'
+'m' | '15m' | '30m'
+'h' | '2h' | '6h' | '12h'
+'d'
 ```
-
-Note that `ms` is not highly reliable due to timer inaccuracies.
 
 ## Retry-After limiter
 

@@ -1,6 +1,6 @@
 import { RateLimiter, RetryAfterRateLimiter } from '$lib/server';
 import type { RequestEvent } from '@sveltejs/kit';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { mock } from 'vitest-mock-extended';
 import type { Rate, RateLimiterPlugin } from '$lib/server';
 
@@ -98,7 +98,7 @@ describe('Basic rate limiter', async () => {
     const limiter = new RateLimiter({
       hashFunction,
       rates: {
-        IPUA: [2, 's']
+        IPUA: [2, '100ms']
       }
     });
 
@@ -108,7 +108,7 @@ describe('Basic rate limiter', async () => {
     expect(await limiter.isLimited(event)).toEqual(false);
     expect(await limiter.isLimited(event)).toEqual(true);
 
-    await delay(1000);
+    await delay(100);
 
     expect(await limiter.isLimited(event)).toEqual(false);
     expect(await limiter.isLimited(event)).toEqual(false);
@@ -122,7 +122,7 @@ describe('Basic rate limiter', async () => {
         cookie: {
           name: 'testcookie',
           secret: 'SECRET',
-          rate: [2, 's'],
+          rate: [2, '250ms'],
           preflight: true
         }
       }
@@ -138,7 +138,7 @@ describe('Basic rate limiter', async () => {
     expect(await limiter.isLimited(event)).toEqual(false);
     expect(await limiter.isLimited(event)).toEqual(true);
 
-    await delay(1000);
+    await delay(250);
 
     expect(await limiter.isLimited(event)).toEqual(false);
     expect(await limiter.isLimited(event)).toEqual(false);
@@ -150,12 +150,12 @@ describe('Basic rate limiter', async () => {
 
     const limiter = new RateLimiter({
       hashFunction,
-      IP: [10, 's'],
-      IPUA: [5, 's'],
+      IP: [10, '500ms'],
+      IPUA: [5, '500ms'],
       cookie: {
         name: 'testcookie',
         secret: 'SECRET',
-        rate: [2, 's'],
+        rate: [2, '500ms'],
         preflight: false
       },
       onLimited(_, reason) {
@@ -208,7 +208,7 @@ describe('Basic rate limiter', async () => {
     expect(await limiter.isLimited(event)).toEqual(true); //  2 1 11 (IP fails)
     expect(await limiter.isLimited(event)).toEqual(true); //  3 1 11 (UA fails)
 
-    await delay(1000);
+    await delay(500);
 
     expect(await limiter.isLimited(event)).toEqual(false); //  1 1 1
     expect(await limiter.isLimited(event)).toEqual(false); //  2 2 2

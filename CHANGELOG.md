@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The "rates" object options (`IP`, `IPUA`, `cookie`) should now be set in the top-level configuration.
+- Deprecated the `ms` rate unit, it's not reliable due to OS timing issues.
 
 ## [0.4.2] - 2023-12-18
 

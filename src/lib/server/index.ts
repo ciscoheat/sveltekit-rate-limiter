@@ -4,9 +4,16 @@ import TTLCache from '@isaacs/ttlcache';
 
 export type RateUnit =
   | 'ms'
+  | '100ms'
+  | '250ms'
+  | '500ms'
   | 's'
+  | '2s'
+  | '5s'
+  | '10s'
   | '15s'
   | '30s'
+  | '45s'
   | 'm'
   | '15m'
   | '30m'
@@ -199,30 +206,44 @@ export class RateLimiter {
 
   static TTLTime(unit: RateUnit) {
     switch (unit) {
-      case 'ms':
-        return 1;
       case 's':
         return 1000;
       case 'm':
-        return 60 * 1000;
+        return 60000;
       case 'h':
-        return 60 * 60 * 1000;
+        return 60 * 60000;
+      case '2s':
+        return 2000;
+      case '5s':
+        return 5000;
+      case '10s':
+        return 10000;
       case '15s':
-        return 15 * 1000;
+        return 15000;
       case '30s':
-        return 30 * 1000;
+        return 30000;
+      case '45s':
+        return 45000;
       case '15m':
-        return 15 * 60 * 1000;
+        return 15 * 60000;
       case '30m':
-        return 30 * 60 * 1000;
+        return 30 * 60000;
+      case '100ms':
+        return 100;
+      case '250ms':
+        return 250;
+      case '500ms':
+        return 500;
       case '2h':
-        return 2 * 60 * 60 * 1000;
+        return 2 * 60 * 60000;
       case '6h':
-        return 6 * 60 * 60 * 1000;
+        return 6 * 60 * 60000;
       case '12h':
-        return 12 * 60 * 60 * 1000;
+        return 12 * 60 * 60000;
       case 'd':
-        return 24 * 60 * 60 * 1000;
+        return 24 * 60 * 60000;
+      case 'ms':
+        return 1;
     }
     throw new Error('Invalid unit for TTLTime: ' + unit);
   }
@@ -336,7 +357,13 @@ export class RateLimiter {
     });
 
     const maxTTL = this.plugins.reduce((acc, plugin) => {
-      const time = RateLimiter.TTLTime(plugin.rate[1]);
+      const rate = plugin.rate[1];
+      if (rate == 'ms') {
+        console.warn(
+          'RateLimiter: The "ms" unit is not reliable due to OS timing issues.'
+        );
+      }
+      const time = RateLimiter.TTLTime(rate);
       return Math.max(time, acc);
     }, 0);
 
