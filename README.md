@@ -22,16 +22,14 @@ import { RateLimiter } from 'sveltekit-rate-limiter/server';
 
 const limiter = new RateLimiter({
   // A rate is defined as [number, unit]
-  rates: {
-    IP: [10, 'h'], // IP address limiter
-    IPUA: [5, 'm'], // IP + User Agent limiter
-    cookie: {
-      // Cookie limiter
-      name: 'limiterid', // Unique cookie name for this limiter
-      secret: 'SECRETKEY-SERVER-ONLY', // Use $env/static/private
-      rate: [2, 'm'],
-      preflight: true // Require preflight call (see load function)
-    }
+  IP: [10, 'h'], // IP address limiter
+  IPUA: [5, 'm'], // IP + User Agent limiter
+  cookie: {
+    // Cookie limiter
+    name: 'limiterid', // Unique cookie name for this limiter
+    secret: 'SECRETKEY-SERVER-ONLY', // Use $env/static/private
+    rate: [2, 'm'],
+    preflight: true // Require preflight call (see load function)
   }
 });
 
@@ -91,6 +89,8 @@ Valid units are, from smallest to largest:
 'ms' | 's' | '15s' | '30s' | 'm' | '15m' | '30m' | 'h' | '2h' | '6h' | '12h' | 'd'
 ```
 
+Note that `ms` is not highly reliable due to timer inaccuracies.
+
 ## Retry-After limiter
 
 There is a version of the rate limiter that will return [Retry-After](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After) information, the number of seconds before the request should be attempted again. It's used in a similar way:
@@ -100,10 +100,8 @@ import { error } from '@sveltejs/kit';
 import { RetryAfterRateLimiter } from 'sveltekit-rate-limiter/server';
 
 const limiter = new RetryAfterRateLimiter({
-  rates: {
-    IP: [10, 'h'],
-    IPUA: [5, 'm']
-  }
+  IP: [10, 'h'],
+  IPUA: [5, 'm']
 });
 
 export const actions = {

@@ -1,14 +1,17 @@
 import { RateLimiter, RetryAfterRateLimiter } from '$lib/server';
 import type { RequestEvent } from '@sveltejs/kit';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mock } from 'vitest-mock-extended';
 import type { Rate, RateLimiterPlugin } from '$lib/server';
-import crypto from 'crypto';
 
 const hashFunction = (input: string) => {
-  return Promise.resolve(
-    crypto.createHash('sha256').update(input).digest('hex')
-  );
+  const msgUint8 = new TextEncoder().encode(input);
+  return crypto.subtle
+    .digest('SHA-256', msgUint8)
+    .then((buffer) => Array.from(new Uint8Array(buffer)))
+    .then((hashArray) => {
+      return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    });
 };
 
 async function delay(ms: number) {
@@ -95,7 +98,7 @@ describe('Basic rate limiter', async () => {
     const limiter = new RateLimiter({
       hashFunction,
       rates: {
-        IPUA: [2, 'ms']
+        IPUA: [2, 's']
       }
     });
 
@@ -105,7 +108,7 @@ describe('Basic rate limiter', async () => {
     expect(await limiter.isLimited(event)).toEqual(false);
     expect(await limiter.isLimited(event)).toEqual(true);
 
-    await delay(1);
+    await delay(1000);
 
     expect(await limiter.isLimited(event)).toEqual(false);
     expect(await limiter.isLimited(event)).toEqual(false);
@@ -119,7 +122,7 @@ describe('Basic rate limiter', async () => {
         cookie: {
           name: 'testcookie',
           secret: 'SECRET',
-          rate: [2, 'ms'],
+          rate: [2, 's'],
           preflight: true
         }
       }
@@ -135,7 +138,7 @@ describe('Basic rate limiter', async () => {
     expect(await limiter.isLimited(event)).toEqual(false);
     expect(await limiter.isLimited(event)).toEqual(true);
 
-    await delay(1);
+    await delay(1000);
 
     expect(await limiter.isLimited(event)).toEqual(false);
     expect(await limiter.isLimited(event)).toEqual(false);
@@ -147,15 +150,13 @@ describe('Basic rate limiter', async () => {
 
     const limiter = new RateLimiter({
       hashFunction,
-      rates: {
-        IP: [10, 'ms'],
-        IPUA: [5, 'ms'],
-        cookie: {
-          name: 'testcookie',
-          secret: 'SECRET',
-          rate: [2, 'ms'],
-          preflight: false
-        }
+      IP: [10, 's'],
+      IPUA: [5, 's'],
+      cookie: {
+        name: 'testcookie',
+        secret: 'SECRET',
+        rate: [2, 's'],
+        preflight: false
       },
       onLimited(_, reason) {
         limits.push(reason);
@@ -170,13 +171,13 @@ describe('Basic rate limiter', async () => {
     expect(await limiter.isLimited(event)).toEqual(false); //  2 2 2
     expect(await limiter.isLimited(event)).toEqual(true); // 3 2 2 (Cookie fails)
 
-    event.cookies.delete('testcookie');
+    event.cookies.delete('testcookie', { path: '/' });
 
     expect(await limiter.isLimited(event)).toEqual(false); //  1 3 3
     expect(await limiter.isLimited(event)).toEqual(false); //  2 4 4
     expect(await limiter.isLimited(event)).toEqual(true); // 3 4 4 (Cookie fails)
 
-    event.cookies.delete('testcookie');
+    event.cookies.delete('testcookie', { path: '/' });
 
     expect(await limiter.isLimited(event)).toEqual(false); //  1 5 5
     expect(await limiter.isLimited(event)).toEqual(true); // 2 6 5 (UA fails)
@@ -186,19 +187,19 @@ describe('Basic rate limiter', async () => {
     expect(await limiter.isLimited(event)).toEqual(true); // 3 1 6 (Cookie fails)
     expect(await limiter.isLimited(event)).toEqual(true); // 3 1 6 (Cookie fails)
 
-    event.cookies.delete('testcookie');
+    event.cookies.delete('testcookie', { path: '/' });
 
     expect(await limiter.isLimited(event)).toEqual(false); //   1 2 7
     expect(await limiter.isLimited(event)).toEqual(false); //   2 3 8
     expect(await limiter.isLimited(event)).toEqual(true); //  3 3 8 (Cookie fails)
 
-    event.cookies.delete('testcookie');
+    event.cookies.delete('testcookie', { path: '/' });
 
     expect(await limiter.isLimited(event)).toEqual(false); //   1 4 9
     expect(await limiter.isLimited(event)).toEqual(false); //   2 5 10
     expect(await limiter.isLimited(event)).toEqual(true); //  3 5 10 (Cookie fails)
 
-    event.cookies.delete('testcookie');
+    event.cookies.delete('testcookie', { path: '/' });
 
     expect(await limiter.isLimited(event)).toEqual(false); //  1 6 10 (UA fails)
 
@@ -207,7 +208,7 @@ describe('Basic rate limiter', async () => {
     expect(await limiter.isLimited(event)).toEqual(true); //  2 1 11 (IP fails)
     expect(await limiter.isLimited(event)).toEqual(true); //  3 1 11 (UA fails)
 
-    await delay(1);
+    await delay(1000);
 
     expect(await limiter.isLimited(event)).toEqual(false); //  1 1 1
     expect(await limiter.isLimited(event)).toEqual(false); //  2 2 2

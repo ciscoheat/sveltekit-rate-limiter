@@ -3,13 +3,11 @@ import { RateLimiter } from '$lib/server';
 import { error, json } from '@sveltejs/kit';
 
 const limiter = new RateLimiter({
-  rates: {
-    cookie: {
-      name: 'preflight-required',
-      rate: [2, '15s'],
-      secret: 'VERY_SECRET',
-      preflight: true
-    }
+  cookie: {
+    name: 'preflight-required',
+    rate: [2, '15s'],
+    secret: 'VERY_SECRET',
+    preflight: true
   }
 });
 

@@ -166,11 +166,26 @@ export type RateLimiterOptions = Partial<{
     event: RequestEvent,
     reason: 'rate' | 'rejected'
   ) => Promise<void | boolean> | void | boolean;
+  /**
+   * @deprecated Add the IP/IPUA/cookie rates to the main object, no need for "rates".
+   */
   rates: {
+    /**
+     * @deprecated Add the IP option to the main object, no need for "rates".
+     */
     IP?: Rate;
+    /**
+     * @deprecated Add the IPUA option to the main object, no need for "rates".
+     */
     IPUA?: Rate;
+    /**
+     * @deprecated Add cookie option to the main object, no need for "rates".
+     */
     cookie?: CookieRateLimiterOptions;
   };
+  IP?: Rate;
+  IPUA?: Rate;
+  cookie?: CookieRateLimiterOptions;
   hashFunction: HashFunction;
 }>;
 
@@ -293,17 +308,18 @@ export class RateLimiter {
       );
     }
 
-    if (options.rates?.IP)
-      this.plugins.push(new IPRateLimiter(options.rates.IP));
+    const IPRates = options.IP ?? options.rates?.IP;
+    if (IPRates) this.plugins.push(new IPRateLimiter(IPRates));
 
-    if (options.rates?.IPUA)
-      this.plugins.push(new IPUserAgentRateLimiter(options.rates.IPUA));
+    const IPUARates = options.IPUA ?? options.rates?.IPUA;
+    if (IPUARates) this.plugins.push(new IPUserAgentRateLimiter(IPUARates));
 
-    if (options.rates?.cookie) {
+    const cookieRates = options.cookie ?? options.rates?.cookie;
+    if (cookieRates) {
       this.plugins.push(
         (this.cookieLimiter = new CookieRateLimiter({
           hashFunction: this.hashFunction,
-          ...options.rates.cookie
+          ...cookieRates
         }))
       );
     }
