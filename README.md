@@ -69,17 +69,17 @@ If the cookie is deleted but the User-Agent stays the same, the counter keeps go
 
 | Request | Cookie    | IPUA  | IP    |
 | ------- | --------- | ----- | ----- |
-| 1       | Hit 1     | Hit 3 | Hit 3 |
-| 2       | Hit 2     | Hit 4 | Hit 4 |
-| 3       | **Limit** | -     | -     |
+| 5       | Hit 1     | Hit 3 | Hit 3 |
+| 6       | Hit 2     | Hit 4 | Hit 4 |
+| 7       | **Limit** | -     | -     |
 
 If deleted one more time, the User-Agent limiter will reach its limit:
 
-| Request | Cookie    | IPUA      | IP    |
-| ------- | --------- | --------- | ----- |
-| 1       | Hit 1     | Hit 5     | Hit 5 |
-| 2       | Hit 2     | **Limit** | -     |
-| 3       | **Limit** | -         | -     |
+| Request  | Cookie    | IPUA      | IP    |
+| -------- | --------- | --------- | ----- |
+| 8        | Hit 1     | Hit 5     | Hit 5 |
+| 9        | Hit 2     | **Limit** | -     |
+| 10       | **Limit** | -         | -     |
 
 ## Valid units
 
