@@ -5,12 +5,16 @@ Headlines: Added, Changed, Deprecated, Removed, Fixed, Security
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.3] - 2024-01-16
 
 ### Changed
 
-- The "rates" object options (`IP`, `IPUA`, `cookie`) should now be set in the top-level configuration.
+- The "rates" object options (`IP`, `IPUA`, `cookie`) should now be set in the top of the configuration for `RateLimiter`, no need for a nested object.
 - Deprecated the `ms` rate unit, it's not reliable due to OS timing issues.
+
+### Added
+
+- Added more units for milliseconds and seconds.
 
 ## [0.4.2] - 2023-12-18
 
