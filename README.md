@@ -1,6 +1,6 @@
 # sveltekit-rate-limiter
 
-A modular rate limiter for password resets, account registration, etc. Use in your `+page.server.ts`, `+server.ts` or `src/hooks.server.ts`.
+A modular rate limiter for password resets, account registration, API call limiting, etc. Use in your `+page.server.ts`, `+server.ts` or `src/hooks.server.ts`.
 
 Uses an in-memory cache ([@isaacs/ttlcache](https://www.npmjs.com/package/@isaacs/ttlcache)), but can be swapped for something else. Same for limiters, which are plugins. The [source file](https://github.com/ciscoheat/sveltekit-rate-limiter/blob/main/src/lib/server/index.ts#L24-L32) lists both interfaces.
 
