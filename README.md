@@ -34,9 +34,13 @@ const limiter = new RateLimiter({
 });
 
 export const load = async (event) => {
-  // Preflight prevents direct posting.
-  // If preflight option is true and this function isn't called
-  // before posting, request will be limited:
+  /**
+   * Preflight prevents direct posting. If preflight option for the
+   * cookie limiter is true and this function isn't called before posting,
+   * request will be limited.
+   *
+   * Remember to await, so the cookie will be set before returning!
+   */
   await limiter.cookieLimiter?.preflight(event);
 };
 
