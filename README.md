@@ -79,11 +79,11 @@ If the cookie is deleted but the User-Agent stays the same, the counter keeps go
 
 If deleted one more time, the User-Agent limiter will reach its limit:
 
-| Request  | Cookie    | IPUA      | IP    |
-| -------- | --------- | --------- | ----- |
-| 8        | Hit 1     | Hit 5     | Hit 5 |
-| 9        | Hit 2     | **Limit** | -     |
-| 10       | **Limit** | -         | -     |
+| Request | Cookie    | IPUA      | IP    |
+| ------- | --------- | --------- | ----- |
+| 8       | Hit 1     | Hit 5     | Hit 5 |
+| 9       | Hit 2     | **Limit** | -     |
+| 10      | **Limit** | -         | -     |
 
 ## Valid units
 
@@ -160,12 +160,12 @@ In `hash`, return one of the following:
 
 - A `string` based on a [RequestEvent](https://kit.svelte.dev/docs/types#public-types-requestevent), which will be counted and checked against the rate.
 - A `boolean`, to short-circuit the plugin chain and make the request fail (`false`) or succeed (`true`) no matter the current rate.
-- Or `null`, to signify an indeterminate result and move to the next plugin in the chain, or fail the request if it's the last one.
+- Or `null`, to signify an indeterminate result and move to the next plugin in the chain, or fail the request if it's the last and no previous limiter have passed.
 
 ### String hash rules
 
-- The string will be hashed later, so you don't need to use a hash function.
-- The string cannot be empty, in which case an exception will be thrown.
+- **The string will be hashed later**, so you don't need to use a hash function.
+- **The string cannot be empty**, in which case an exception will be thrown.
 
 ### Example
 
@@ -199,4 +199,39 @@ const limiter = new RateLimiter({
   plugins: [new CustomLimiter([5, 'm'])]
   // The built-in limiters can be added as well.
 });
+```
+
+## Custom data for the limiter
+
+You can specify a type parameter to `RateLimiter` that expands the `isLimited` method with an extra parameter. There you can add extra data that will be supplied to the custom limiters:
+
+```ts
+class AllowDomain implements RateLimiterPlugin {
+  // Shortest rate, so it will be executed first
+  readonly rate: Rate = [0, '100ms'];
+  readonly allowedDomain: string;
+
+  constructor(allowedDomain: string) {
+    this.allowedDomain = allowedDomain;
+  }
+
+  async hash(_: RequestEvent, extraData: { email: string }) {
+    return extraData.email.endsWith(this.allowedDomain) ? true : null;
+  }
+}
+```
+
+```ts
+const limiter = new RateLimiter<{ email: string }>({
+  plugins: [new AllowDomain('company-domain.com')],
+  IP: [10, 'm']
+});
+
+export const actions = {
+  default: async (event) => {
+    if (await limiter.isLimited(event, { email: event.locals.user.email })) {
+      throw error(429);
+    }
+  }
+};
 ```

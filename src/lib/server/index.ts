@@ -32,8 +32,11 @@ export interface RateLimiterStore {
   clear: () => Promise<void>;
 }
 
-export interface RateLimiterPlugin {
-  hash: (event: RequestEvent) => Promise<string | boolean | null>;
+export interface RateLimiterPlugin<Extra = never> {
+  hash: (
+    event: RequestEvent,
+    extraData: Extra
+  ) => Promise<string | boolean | null>;
   get rate(): Rate;
 }
 
@@ -190,13 +193,13 @@ export type RateLimiterOptions = Partial<{
      */
     cookie?: CookieRateLimiterOptions;
   };
-  IP?: Rate;
-  IPUA?: Rate;
-  cookie?: CookieRateLimiterOptions;
+  IP: Rate;
+  IPUA: Rate;
+  cookie: CookieRateLimiterOptions;
   hashFunction: HashFunction;
 }>;
 
-export class RateLimiter {
+export class RateLimiter<Extra = never> {
   private readonly store: RateLimiterStore;
   private readonly plugins: RateLimiterPlugin[];
   private readonly onLimited: RateLimiterOptions['onLimited'] | undefined;
@@ -253,8 +256,21 @@ export class RateLimiter {
    * @param {RequestEvent} event
    * @returns {Promise<boolean>} true if request is limited, false otherwise
    */
-  async isLimited(event: RequestEvent): Promise<boolean> {
-    return (await this._isLimited(event)).limited;
+  async isLimited(
+    event: [Extra] extends [never] ? RequestEvent : { missing_extraData: Extra }
+  ): Promise<boolean>;
+
+  /**
+   * Check if a request event is rate limited, supplying extra data that will be available for plugins.
+   * @param {RequestEvent} event
+   * @returns {Promise<boolean>} true if request is limited, false otherwise
+   */
+  async isLimited(event: RequestEvent, extraData: Extra): Promise<boolean>;
+
+  async isLimited(event: unknown, extraData?: unknown): Promise<boolean> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (await this._isLimited(event as RequestEvent, extraData as any))
+      .limited;
   }
 
   /**
@@ -270,23 +286,24 @@ export class RateLimiter {
    * @returns {Promise<boolean>} true if request is limited, false otherwise
    */
   protected async _isLimited(
-    event: RequestEvent
+    event: RequestEvent,
+    extraData: Extra
   ): Promise<{ limited: boolean; hash: string | null; unit: RateUnit }> {
-    let limited = false;
+    let limited: boolean | undefined = undefined;
 
     for (const plugin of this.plugins) {
-      const id = await plugin.hash(event);
+      const rate = plugin.rate;
+      const id = await plugin.hash(event, extraData as never);
+
       if (id === false) {
         if (this.onLimited) {
           const status = await this.onLimited(event, 'rejected');
           if (status === true)
-            return { limited: false, hash: null, unit: plugin.rate[1] };
+            return { limited: false, hash: null, unit: rate[1] };
         }
-        return { limited: true, hash: null, unit: plugin.rate[1] };
-      } else if (id === true) {
-        return { limited: false, hash: null, unit: plugin.rate[1] };
+        return { limited: true, hash: null, unit: rate[1] };
       } else if (id === null) {
-        limited = true;
+        if (limited === undefined) limited = true;
         continue;
       } else {
         limited = false;
@@ -298,21 +315,24 @@ export class RateLimiter {
         );
       }
 
-      const hash = await this.hashFunction(id);
-      const rate = await this.store.add(hash, plugin.rate[1]);
+      if (id === true) {
+        return { limited: false, hash: null, unit: rate[1] };
+      }
 
-      if (rate > plugin.rate[0]) {
+      const hash = await this.hashFunction(id);
+      const currentRate = await this.store.add(hash, rate[1]);
+
+      if (currentRate > rate[0]) {
         if (this.onLimited) {
           const status = await this.onLimited(event, 'rate');
-          if (status === true)
-            return { limited: false, hash, unit: plugin.rate[1] };
+          if (status === true) return { limited: false, hash, unit: rate[1] };
         }
-        return { limited: true, hash, unit: plugin.rate[1] };
+        return { limited: true, hash, unit: rate[1] };
       }
     }
 
     return {
-      limited,
+      limited: limited ?? false,
       hash: null,
       unit: this.plugins[this.plugins.length - 1].rate[1]
     };
@@ -371,7 +391,7 @@ export class RateLimiter {
   }
 }
 
-export class RetryAfterRateLimiter extends RateLimiter {
+export class RetryAfterRateLimiter<Extra = never> extends RateLimiter<Extra> {
   private readonly retryAfter: RateLimiterStore;
 
   constructor(
@@ -404,9 +424,11 @@ export class RetryAfterRateLimiter extends RateLimiter {
    * @returns {Promise<limited: boolean, retryAfter: number>} Rate limit status for the event.
    */
   async check(
-    event: RequestEvent
+    event: RequestEvent,
+    extraData?: Extra
   ): Promise<{ limited: boolean; retryAfter: number }> {
-    const result = await this._isLimited(event);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await this._isLimited(event, extraData as any);
 
     if (!result.limited) return { limited: false, retryAfter: 0 };
 

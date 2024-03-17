@@ -5,6 +5,16 @@ Headlines: Added, Changed, Deprecated, Removed, Fixed, Security
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2024-03-17
+
+### Changed
+
+- Plugins returning `null` weren't fully indeterminate: They will now limit the request only if no other limited have passed. As soon as another plugin passes, any subsequent `null` result will pass (for the current request).
+
+### Added
+
+- Added "extra data" type parameter for the rate limiter, so plugins can be provided information outside the request event. See README for an example.
+
 ## [0.4.3] - 2024-01-16
 
 ### Changed

@@ -308,9 +308,9 @@ describe('Basic rate limiter', async () => {
         }
       });
 
-      expect(await limiter.isLimited(event)).toEqual(true);
-      expect(await limiter.isLimited(event)).toEqual(true);
-      expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(false);
+      expect(await limiter.isLimited(event)).toEqual(false);
+      expect(await limiter.isLimited(event)).toEqual(false);
       expect(await limiter.isLimited(event)).toEqual(true);
       expect(await limiter.isLimited(event)).toEqual(true);
       expect(await limiter.isLimited(event)).toEqual(true);
@@ -331,7 +331,89 @@ describe('Basic rate limiter', async () => {
       expect(await limiter.isLimited(event)).toEqual(true);
       expect(await limiter.isLimited(event)).toEqual(true);
       expect(await limiter.isLimited(event)).toEqual(true);
+      expect(await limiter.isLimited(event)).toEqual(true);
     });
+  });
+});
+
+class ExtraDataPlugin implements RateLimiterPlugin {
+  readonly rate: Rate = [75, 'm'];
+  readonly log: string[] = [];
+
+  async hash(event: RequestEvent, extra: { email: string }) {
+    const hash = event.getClientAddress() + extra.email;
+    this.log.push(hash);
+    return hash;
+  }
+}
+
+class AllowDomain implements RateLimiterPlugin {
+  readonly rate: Rate = [0, 's'];
+  readonly allowedDomain: string;
+
+  constructor(allowedDomain: string) {
+    this.allowedDomain = allowedDomain;
+  }
+
+  async hash(_: RequestEvent, extraData: { email: string }) {
+    return extraData.email.endsWith(this.allowedDomain) ? true : null;
+  }
+}
+
+describe('Plugins with extra data', () => {
+  it('should take it into consideration', async () => {
+    const event = mockEvent() as RequestEvent;
+    const extra = new ExtraDataPlugin();
+    const limiter = new RateLimiter<{ email: string }>({
+      hashFunction,
+      plugins: [extra],
+      IP: [3, 's']
+    });
+
+    expect(await limiter.isLimited(event, { email: 'abc@test.com' })).toBe(
+      false
+    );
+    expect(extra.log[0]).toEqual('345.456.789.0abc@test.com');
+
+    // @ts-expect-error No extra data specified
+    expect(limiter.isLimited(event)).rejects.toThrow();
+
+    const limiter2 = new RateLimiter({
+      hashFunction,
+      IPUA: [3, 's']
+    });
+
+    // @ts-expect-error Extra data specified when not supposed to
+    await limiter2.isLimited(event, { extraData: 123 });
+  });
+
+  it('should work with boolean and null result', async () => {
+    const event = mockEvent() as RequestEvent;
+    const limiter = new RateLimiter<{ email: string }>({
+      hashFunction,
+      plugins: [new AllowDomain('test.com')],
+      IP: [3, 's']
+    });
+
+    expect(await limiter.isLimited(event, { email: 'hello@test.com' })).toEqual(
+      false
+    );
+    expect(
+      await limiter.isLimited(event, { email: 'hello@example.com' })
+    ).toEqual(false);
+    expect(
+      await limiter.isLimited(event, { email: 'hello@example.com' })
+    ).toEqual(false);
+    expect(
+      await limiter.isLimited(event, { email: 'hello@example.com' })
+    ).toEqual(false);
+    expect(
+      await limiter.isLimited(event, { email: 'hello@example.com' })
+    ).toEqual(true);
+
+    expect(await limiter.isLimited(event, { email: 'hello@test.com' })).toEqual(
+      false
+    );
   });
 });
 
@@ -341,7 +423,7 @@ describe('Retry-After rate limiter', () => {
     const limiter = new RetryAfterRateLimiter({
       hashFunction,
       rates: {
-        IPUA: [3, 's']
+        IPUA: [3, '5s']
       }
     });
 
@@ -355,13 +437,14 @@ describe('Retry-After rate limiter', () => {
     expect(status).toEqual({ limited: false, retryAfter: 0 });
 
     status = await limiter.check(event);
-    expect(status).toEqual({ limited: true, retryAfter: 1 });
+    expect(status.limited).toBe(true);
+    expect(status.retryAfter.toString()).toMatch(/^[345]$/);
 
-    await delay(1100);
+    await delay(5100);
 
     status = await limiter.check(event);
     expect(status).toEqual({ limited: false, retryAfter: 0 });
-  });
+  }, 6000);
 
   it('should work for multiple rate limiters', async () => {
     const event = mockEvent() as RequestEvent;
