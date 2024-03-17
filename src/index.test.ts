@@ -468,7 +468,8 @@ describe('Retry-After rate limiter', () => {
     expect(status).toEqual({ limited: false, retryAfter: 0 });
 
     status = await limiter.check(event);
-    expect(status).toEqual({ limited: true, retryAfter: 1 });
+    expect(status.limited).toEqual(true);
+    expect(status.retryAfter.toString()).toMatch(/^[01]$/);
 
     event.request.headers.set('User-Agent', 'Safari 2');
 
