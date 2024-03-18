@@ -140,9 +140,9 @@ The default hash function is using `crypto.subtle` to generate a SHA-256 digest,
 ```ts
 import crypto from 'crypto';
 
-// (input: string) => Promise<string>
+// (input: string) => MaybePromise<string>
 const hashFunction = (input: string) =>
-  Promise.resolve(crypto.createHash('sha256').update(input).digest('hex'));
+  crypto.createHash('sha256').update(input).digest('hex');
 ```
 
 ## Creating a custom limiter
@@ -151,7 +151,7 @@ Implement the `RateLimiterPlugin` interface:
 
 ```ts
 interface RateLimiterPlugin {
-  hash: (event: RequestEvent) => Promise<string | boolean | null>;
+  hash: (event: RequestEvent) => MaybePromise<string | boolean | null>;
   get rate(): Rate;
 }
 ```
