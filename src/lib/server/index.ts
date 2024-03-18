@@ -1,4 +1,4 @@
-import type { Cookies, RequestEvent } from '@sveltejs/kit';
+import type { Cookies, RequestEvent, MaybePromise } from '@sveltejs/kit';
 import { nanoid } from 'nanoid';
 import TTLCache from '@isaacs/ttlcache';
 
@@ -28,15 +28,15 @@ export type Rate = [number, RateUnit];
 ///// Interfaces /////////////////////////////////////////////////////////////
 
 export interface RateLimiterStore {
-  add: (hash: string, unit: RateUnit) => Promise<number>;
-  clear: () => Promise<void>;
+  add: (hash: string, unit: RateUnit) => MaybePromise<number>;
+  clear: () => MaybePromise<void>;
 }
 
 export interface RateLimiterPlugin<Extra = never> {
   hash: (
     event: RequestEvent,
     extraData: Extra
-  ) => Promise<string | boolean | null>;
+  ) => MaybePromise<string | boolean | null>;
   get rate(): Rate;
 }
 
@@ -148,7 +148,7 @@ class CookieRateLimiter implements RateLimiterPlugin {
 
 ///// Hashing ///////////////////////////////////////////////////////
 
-type HashFunction = (input: string) => Promise<string>;
+type HashFunction = (input: string) => MaybePromise<string>;
 
 let defaultHashFunction: HashFunction;
 
@@ -175,7 +175,7 @@ export type RateLimiterOptions = Partial<{
   onLimited: (
     event: RequestEvent,
     reason: 'rate' | 'rejected'
-  ) => Promise<void | boolean> | void | boolean;
+  ) => MaybePromise<void | boolean>;
   /**
    * @deprecated Add the IP/IPUA/cookie rates to the main object, no need for "rates".
    */
