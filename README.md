@@ -92,7 +92,7 @@ Valid units are, from smallest to largest:
 ```
 '100ms' | '250ms' | '500ms'
 's' | '2s' | '5s' | '10s' | '15s' | '30s' | '45s'
-'m' | '15m' | '30m'
+'m' | '2m' | '5m  | '10m' | '15m' | '30m' | '45m'
 'h' | '2h' | '6h' | '12h'
 'd'
 ```

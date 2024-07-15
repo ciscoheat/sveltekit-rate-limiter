@@ -15,8 +15,12 @@ export type RateUnit =
   | '30s'
   | '45s'
   | 'm'
+  | '2m'
+  | '5m'
+  | '10m'
   | '15m'
   | '30m'
+  | '45m'
   | 'h'
   | '2h'
   | '6h'
@@ -227,10 +231,18 @@ export class RateLimiter<Extra = never> {
         return 30000;
       case '45s':
         return 45000;
+      case '2m':
+        return 2 * 60000;
+      case '5m':
+        return 5 * 60000;
+      case '10m':
+        return 10 * 60000;
       case '15m':
         return 15 * 60000;
       case '30m':
         return 30 * 60000;
+      case '45m':
+        return 45 * 60000;
       case '100ms':
         return 100;
       case '250ms':
