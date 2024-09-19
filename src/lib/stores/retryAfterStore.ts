@@ -1,4 +1,4 @@
-import type { RateLimiterStore } from '$lib/server';
+import type { RateLimiterStore } from '$lib/server/index.js';
 import TTLCache from '@isaacs/ttlcache';
 
 export class RetryAfterStore implements RateLimiterStore {

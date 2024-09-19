@@ -93,3 +93,10 @@ export interface RateLimiterPlugin<Extra = never> {
 }
 
 export type HashFunction = (input: string) => MaybePromise<string>;
+
+////// Aggregation /////
+
+export { RateLimiter } from './rateLimiter.js';
+export { RetryAfterRateLimiter } from './retryAfterRateLimiter.js';
+
+export { defaultHashFunction } from './hashFunction.js';

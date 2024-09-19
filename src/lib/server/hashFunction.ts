@@ -3,10 +3,10 @@ import type { HashFunction } from '$lib/server/index.js';
 export let defaultHashFunction: HashFunction;
 
 if (globalThis?.crypto?.subtle) {
-  defaultHashFunction = _subtleSha256;
+  defaultHashFunction = subtleSha256;
 }
 
-async function _subtleSha256(str: string) {
+async function subtleSha256(str: string) {
   const digest = await crypto.subtle.digest(
     'SHA-256',
     new TextEncoder().encode(str)

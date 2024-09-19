@@ -15,7 +15,10 @@ import type { RequestEvent, MaybePromise } from '@sveltejs/kit';
 import { defaultHashFunction } from '$lib/server/hashFunction.js';
 import { TTLStore } from '$lib/stores/ttlStore.js';
 
-export type CalculatedRate = [number, number];
+/**
+ * Like Rate, but with TTL as a number instead of a string unit
+ */
+export type TTLRate = [number, number];
 
 export type RateLimiterOptions = Partial<{
   plugins: RateLimiterPlugin[];
@@ -51,7 +54,7 @@ export type RateLimiterOptions = Partial<{
 export class RateLimiter<Extra = never> {
   private readonly store: RateLimiterStore;
   private readonly plugins: {
-    rate: CalculatedRate;
+    rate: TTLRate;
     limiter: RateLimiterPlugin;
   }[];
   private readonly onLimited: RateLimiterOptions['onLimited'] | undefined;
@@ -167,7 +170,7 @@ export class RateLimiter<Extra = never> {
         Array.isArray(limiter.rate[0]) ? limiter.rate : [limiter.rate]
       ) as Rate[];
       return pluginRates.map((rate) => ({
-        rate: [rate[0], TTLTime(rate[1])] as const satisfies CalculatedRate,
+        rate: [rate[0], TTLTime(rate[1])] as const satisfies TTLRate,
         limiter
       }));
     }
