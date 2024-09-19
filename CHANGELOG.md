@@ -5,6 +5,12 @@ Headlines: Added, Changed, Deprecated, Removed, Fixed, Security
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Plugins can now have an array of rates, so limits like "1 per secord, 100 per hour" can be set.
+
 ## [0.5.2] - 2024-07-15
 
 ### Added
