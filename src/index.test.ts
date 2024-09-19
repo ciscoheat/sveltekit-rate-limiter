@@ -1,4 +1,4 @@
-import type { Rate, RateLimiterPlugin } from '$lib/server/index.js';
+import type { Rate, RateLimiterPlugin } from '$lib/server/limiters/index.js';
 import { RateLimiter } from '$lib/server/rateLimiter.js';
 import { RetryAfterRateLimiter } from '$lib/server/retryAfterRateLimiter.js';
 import type { RequestEvent } from '@sveltejs/kit';

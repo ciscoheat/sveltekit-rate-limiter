@@ -1,4 +1,6 @@
-import type { HashFunction } from '$lib/server/index.js';
+import type { MaybePromise } from '@sveltejs/kit';
+
+export type HashFunction = (input: string) => MaybePromise<string>;
 
 export let defaultHashFunction: HashFunction;
 

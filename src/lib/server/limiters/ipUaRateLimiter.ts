@@ -1,4 +1,4 @@
-import type { Rate, RateLimiterPlugin } from '$lib/server/index.js';
+import type { Rate, RateLimiterPlugin } from '../index.js';
 import type { RequestEvent } from '@sveltejs/kit';
 
 export class IPUserAgentRateLimiter implements RateLimiterPlugin {

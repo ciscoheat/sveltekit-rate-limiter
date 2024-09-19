@@ -1,55 +1,17 @@
-import {
-  CookieRateLimiter,
-  type CookieRateLimiterOptions
-} from '$lib/limiters/cookieRateLimiter.js';
-import { IPRateLimiter } from '$lib/limiters/ipRateLimiter.js';
-import { IPUserAgentRateLimiter } from '$lib/limiters/ipUaRateLimiter.js';
+import { CookieRateLimiter } from './limiters/cookieRateLimiter.js';
+import { IPRateLimiter } from './limiters/ipRateLimiter.js';
+import { IPUserAgentRateLimiter } from './limiters/ipUaRateLimiter.js';
+import type { RequestEvent } from '@sveltejs/kit';
+import { defaultHashFunction, type HashFunction } from './hashFunction.js';
+import { TTLStore } from './stores/ttlStore.js';
+import type { RateLimiterStore } from './stores/index.js';
 import {
   TTLTime,
-  type HashFunction,
   type Rate,
+  type RateLimiterOptions,
   type RateLimiterPlugin,
-  type RateLimiterStore
-} from '$lib/server/index.js';
-import type { RequestEvent, MaybePromise } from '@sveltejs/kit';
-import { defaultHashFunction } from '$lib/server/hashFunction.js';
-import { TTLStore } from '$lib/stores/ttlStore.js';
-
-/**
- * Like Rate, but with TTL as a number instead of a string unit
- */
-export type TTLRate = [number, number];
-
-export type RateLimiterOptions = Partial<{
-  plugins: RateLimiterPlugin[];
-  store: RateLimiterStore;
-  maxItems: number;
-  onLimited: (
-    event: RequestEvent,
-    reason: 'rate' | 'rejected'
-  ) => MaybePromise<void | boolean>;
-  /**
-   * @deprecated Add the IP/IPUA/cookie rates to the main object, no need for "rates".
-   */
-  rates: {
-    /**
-     * @deprecated Add the IP option to the main object, no need for "rates".
-     */
-    IP?: Rate;
-    /**
-     * @deprecated Add the IPUA option to the main object, no need for "rates".
-     */
-    IPUA?: Rate;
-    /**
-     * @deprecated Add cookie option to the main object, no need for "rates".
-     */
-    cookie?: CookieRateLimiterOptions;
-  };
-  IP: Rate | Rate[];
-  IPUA: Rate | Rate[];
-  cookie: CookieRateLimiterOptions;
-  hashFunction: HashFunction;
-}>;
+  type TTLRate
+} from './limiters/index.js';
 
 export class RateLimiter<Extra = never> {
   private readonly store: RateLimiterStore;

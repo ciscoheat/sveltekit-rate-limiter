@@ -1,9 +1,5 @@
-import type {
-  HashFunction,
-  Rate,
-  RateLimiterPlugin
-} from '$lib/server/index.js';
-import { defaultHashFunction } from '$lib/server/hashFunction.js';
+import type { HashFunction, Rate, RateLimiterPlugin } from '../index.js';
+import { defaultHashFunction } from '../hashFunction.js';
 import type { Cookies, RequestEvent } from '@sveltejs/kit';
 import { nanoid } from 'nanoid';
 
