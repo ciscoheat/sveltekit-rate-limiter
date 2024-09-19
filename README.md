@@ -97,6 +97,10 @@ Valid units are, from smallest to largest:
 'd'
 ```
 
+## Multiple limits
+
+You can specify the rates as an array, to handle multiple rates per limiter, like "Max 1 per second and 100 per hour": `[[1, 's'], [100, 'h']]`.
+
 ## Retry-After limiter
 
 There is a version of the rate limiter that will return [Retry-After](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After) information, the number of seconds before the request should be attempted again. This has been implemented in the `src/hooks.server.ts` file and instead of throwing an error code like other pages, we have to create a new response so that we can add the header.
@@ -152,7 +156,7 @@ Implement the `RateLimiterPlugin` interface:
 ```ts
 interface RateLimiterPlugin {
   hash: (event: RequestEvent) => MaybePromise<string | boolean | null>;
-  get rate(): Rate;
+  get rate(): Rate | Rate[];
 }
 ```
 
@@ -176,9 +180,9 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { Rate, RateLimiterPlugin } from 'sveltekit-rate-limiter/server';
 
 class IPUserAgentRateLimiter implements RateLimiterPlugin {
-  readonly rate: Rate;
+  readonly rate: Rate | Rate[];
 
-  constructor(rate: Rate) {
+  constructor(rate: Rate | Rate[]) {
     this.rate = rate;
   }
 
@@ -216,6 +220,7 @@ class AllowDomain implements RateLimiterPlugin {
   }
 
   async hash(_: RequestEvent, extraData: { email: string }) {
+    // Return true to bypass the rest of the plugin chain
     return extraData.email.endsWith(this.allowedDomain) ? true : null;
   }
 }
