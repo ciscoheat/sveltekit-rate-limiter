@@ -334,6 +334,35 @@ describe('Basic rate limiter', async () => {
       expect(await limiter.isLimited(event)).toEqual(true);
     });
   });
+
+  describe('Using an array of rates for the built-in limiters', () => {
+    const event = mockEvent() as RequestEvent;
+
+    it('should limit the request depending on all rates', async () => {
+      const limiter = new RateLimiter({
+        hashFunction,
+        IP: [
+          [1, '250ms'],
+          [2, 's']
+        ]
+      });
+
+      // One per 250ms, one per second
+      expect(await limiter.isLimited(event)).toEqual(false);
+      expect(await limiter.isLimited(event)).toEqual(true);
+
+      await delay(260);
+
+      // One per 250ms, two per second
+      expect(await limiter.isLimited(event)).toEqual(false);
+      expect(await limiter.isLimited(event)).toEqual(true);
+
+      await delay(260);
+
+      // Limit: more than two per second
+      expect(await limiter.isLimited(event)).toEqual(false);
+    });
+  });
 });
 
 class ExtraDataPlugin implements RateLimiterPlugin {

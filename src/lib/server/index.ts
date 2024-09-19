@@ -29,10 +29,12 @@ export type RateUnit =
 
 export type Rate = [number, RateUnit];
 
+type CalculatedRate = [number, number];
+
 ///// Interfaces /////////////////////////////////////////////////////////////
 
 export interface RateLimiterStore {
-  add: (hash: string, unit: RateUnit) => MaybePromise<number>;
+  add: (hash: string, ttl: number) => MaybePromise<number>;
   clear: () => MaybePromise<void>;
 }
 
@@ -41,15 +43,15 @@ export interface RateLimiterPlugin<Extra = never> {
     event: RequestEvent,
     extraData: Extra
   ) => MaybePromise<string | boolean | null>;
-  get rate(): Rate;
+  get rate(): Rate | Rate[];
 }
 
 ///// Plugins /////////////////////////////////////////////////////////////////
 
 class IPRateLimiter implements RateLimiterPlugin {
-  readonly rate: Rate;
+  readonly rate: Rate | Rate[];
 
-  constructor(rate: Rate) {
+  constructor(rate: Rate | Rate[]) {
     this.rate = rate;
   }
 
@@ -59,9 +61,9 @@ class IPRateLimiter implements RateLimiterPlugin {
 }
 
 class IPUserAgentRateLimiter implements RateLimiterPlugin {
-  readonly rate: Rate;
+  readonly rate: Rate | Rate[];
 
-  constructor(rate: Rate) {
+  constructor(rate: Rate | Rate[]) {
     this.rate = rate;
   }
 
@@ -77,14 +79,14 @@ type CookieSerializeOptions = NonNullable<Parameters<Cookies['set']>[2]>;
 type CookieRateLimiterOptions = {
   name: string;
   secret: string;
-  rate: Rate;
+  rate: Rate | Rate[];
   preflight: boolean;
   serializeOptions?: CookieSerializeOptions;
   hashFunction?: HashFunction;
 };
 
 class CookieRateLimiter implements RateLimiterPlugin {
-  readonly rate: Rate;
+  readonly rate: Rate | Rate[];
   private readonly cookieOptions: CookieSerializeOptions;
   private readonly secret: string;
   private readonly requirePreflight: boolean;
@@ -197,15 +199,18 @@ export type RateLimiterOptions = Partial<{
      */
     cookie?: CookieRateLimiterOptions;
   };
-  IP: Rate;
-  IPUA: Rate;
+  IP: Rate | Rate[];
+  IPUA: Rate | Rate[];
   cookie: CookieRateLimiterOptions;
   hashFunction: HashFunction;
 }>;
 
 export class RateLimiter<Extra = never> {
   private readonly store: RateLimiterStore;
-  private readonly plugins: RateLimiterPlugin[];
+  private readonly plugins: {
+    rate: CalculatedRate;
+    limiter: RateLimiterPlugin;
+  }[];
   private readonly onLimited: RateLimiterOptions['onLimited'] | undefined;
   private readonly hashFunction: HashFunction;
 
@@ -300,20 +305,20 @@ export class RateLimiter<Extra = never> {
   protected async _isLimited(
     event: RequestEvent,
     extraData: Extra
-  ): Promise<{ limited: boolean; hash: string | null; unit: RateUnit }> {
+  ): Promise<{ limited: boolean; hash: string | null; ttl: number }> {
     let limited: boolean | undefined = undefined;
 
     for (const plugin of this.plugins) {
       const rate = plugin.rate;
-      const id = await plugin.hash(event, extraData as never);
+      const id = await plugin.limiter.hash(event, extraData as never);
 
       if (id === false) {
         if (this.onLimited) {
           const status = await this.onLimited(event, 'rejected');
           if (status === true)
-            return { limited: false, hash: null, unit: rate[1] };
+            return { limited: false, hash: null, ttl: rate[1] };
         }
-        return { limited: true, hash: null, unit: rate[1] };
+        return { limited: true, hash: null, ttl: rate[1] };
       } else if (id === null) {
         if (limited === undefined) limited = true;
         continue;
@@ -328,7 +333,7 @@ export class RateLimiter<Extra = never> {
       }
 
       if (id === true) {
-        return { limited: false, hash: null, unit: rate[1] };
+        return { limited: false, hash: null, ttl: rate[1] };
       }
 
       const hash = await this.hashFunction(id);
@@ -337,21 +342,20 @@ export class RateLimiter<Extra = never> {
       if (currentRate > rate[0]) {
         if (this.onLimited) {
           const status = await this.onLimited(event, 'rate');
-          if (status === true) return { limited: false, hash, unit: rate[1] };
+          if (status === true) return { limited: false, hash, ttl: rate[1] };
         }
-        return { limited: true, hash, unit: rate[1] };
+        return { limited: true, hash, ttl: rate[1] };
       }
     }
 
     return {
       limited: limited ?? false,
       hash: null,
-      unit: this.plugins[this.plugins.length - 1].rate[1]
+      ttl: this.plugins[this.plugins.length - 1].rate[1]
     };
   }
 
   constructor(options: RateLimiterOptions = {}) {
-    this.plugins = [...(options.plugins ?? [])];
     this.onLimited = options.onLimited;
     this.hashFunction = options.hashFunction ?? defaultHashFunction;
 
@@ -361,19 +365,48 @@ export class RateLimiter<Extra = never> {
       );
     }
 
+    //#region Plugin setup
+
+    function mapPluginRates(limiter: RateLimiterPlugin) {
+      if (!limiter.rate.length)
+        throw new Error(`Empty rate for limiter ${limiter.constructor.name}`);
+      const pluginRates = (
+        Array.isArray(limiter.rate[0]) ? limiter.rate : [limiter.rate]
+      ) as Rate[];
+      return pluginRates.map((rate) => ({
+        rate: [
+          rate[0],
+          RateLimiter.TTLTime(rate[1])
+        ] as const satisfies CalculatedRate,
+        limiter
+      }));
+    }
+
+    this.plugins = (options.plugins ?? []).flatMap(mapPluginRates);
+
     const IPRates = options.IP ?? options.rates?.IP;
-    if (IPRates) this.plugins.push(new IPRateLimiter(IPRates));
+    if (IPRates) {
+      this.plugins = this.plugins.concat(
+        mapPluginRates(new IPRateLimiter(IPRates))
+      );
+    }
 
     const IPUARates = options.IPUA ?? options.rates?.IPUA;
-    if (IPUARates) this.plugins.push(new IPUserAgentRateLimiter(IPUARates));
+    if (IPUARates) {
+      this.plugins = this.plugins.concat(
+        mapPluginRates(new IPUserAgentRateLimiter(IPUARates))
+      );
+    }
 
     const cookieRates = options.cookie ?? options.rates?.cookie;
     if (cookieRates) {
-      this.plugins.push(
-        (this.cookieLimiter = new CookieRateLimiter({
-          hashFunction: this.hashFunction,
-          ...cookieRates
-        }))
+      this.plugins = this.plugins.concat(
+        mapPluginRates(
+          (this.cookieLimiter = new CookieRateLimiter({
+            hashFunction: this.hashFunction,
+            ...cookieRates
+          }))
+        )
       );
     }
 
@@ -383,20 +416,20 @@ export class RateLimiter<Extra = never> {
 
     // Sort plugins by rate, if early cancelling
     this.plugins.sort((a, b) => {
-      const diff =
-        RateLimiter.TTLTime(a.rate[1]) - RateLimiter.TTLTime(b.rate[1]);
+      const diff = a.rate[1] - b.rate[1];
       return diff == 0 ? a.rate[0] - b.rate[0] : diff;
     });
 
+    //#endregion
+
     const maxTTL = this.plugins.reduce((acc, plugin) => {
       const rate = plugin.rate[1];
-      if (rate == 'ms') {
+      if (rate == 1) {
         console.warn(
           'RateLimiter: The "ms" unit is not reliable due to OS timing issues.'
         );
       }
-      const time = RateLimiter.TTLTime(rate);
-      return Math.max(time, acc);
+      return Math.max(rate, acc);
     }, 0);
 
     this.store = options.store ?? new TTLStore(maxTTL, options.maxItems);
@@ -416,10 +449,6 @@ export class RetryAfterRateLimiter<Extra = never> extends RateLimiter<Extra> {
 
   private static toSeconds(rateMs: number) {
     return Math.max(0, Math.floor(rateMs / 1000));
-  }
-
-  private static unitToSeconds(unit: RateUnit) {
-    return RetryAfterRateLimiter.toSeconds(RateLimiter.TTLTime(unit));
   }
 
   /**
@@ -447,12 +476,12 @@ export class RetryAfterRateLimiter<Extra = never> extends RateLimiter<Extra> {
     if (result.hash === null) {
       return {
         limited: true,
-        retryAfter: RetryAfterRateLimiter.unitToSeconds(result.unit)
+        retryAfter: RetryAfterRateLimiter.toSeconds(result.ttl)
       };
     }
 
     const retryAfter = RetryAfterRateLimiter.toSeconds(
-      (await this.retryAfter.add(result.hash, result.unit)) - Date.now()
+      (await this.retryAfter.add(result.hash, result.ttl)) - Date.now()
     );
 
     return { limited: true, retryAfter };
@@ -476,13 +505,13 @@ class TTLStore implements RateLimiterStore {
     return this.cache.clear();
   }
 
-  async add(hash: string, unit: RateUnit) {
+  async add(hash: string, ttl: number) {
     const currentRate = this.cache.get(hash) ?? 0;
-    return this.set(hash, currentRate + 1, unit);
+    return this.set(hash, currentRate + 1, ttl);
   }
 
-  private set(hash: string, rate: number, unit: RateUnit): number {
-    this.cache.set(hash, rate, { ttl: RateLimiter.TTLTime(unit) });
+  private set(hash: string, rate: number, ttl: number): number {
+    this.cache.set(hash, rate, { ttl });
     return rate;
   }
 }
@@ -501,11 +530,10 @@ class RetryAfterStore implements RateLimiterStore {
     return this.cache.clear();
   }
 
-  async add(hash: string, unit: RateUnit) {
+  async add(hash: string, ttl: number) {
     const currentRate = this.cache.get(hash);
     if (currentRate) return this.cache.get(hash) ?? 0;
 
-    const ttl = RateLimiter.TTLTime(unit);
     const retryAfter = Date.now() + ttl;
     this.cache.set(hash, retryAfter, { ttl });
 
