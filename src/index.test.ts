@@ -360,7 +360,18 @@ describe('Basic rate limiter', async () => {
       await delay(260);
 
       // Limit: more than two per second
+      expect(await limiter.isLimited(event)).toEqual(true);
+
+      await delay(260);
+
+      // Still in effect
+      expect(await limiter.isLimited(event)).toEqual(true);
+
+      await delay(260);
+
+      // 1 second has passed
       expect(await limiter.isLimited(event)).toEqual(false);
+      expect(await limiter.isLimited(event)).toEqual(true);
     });
   });
 });

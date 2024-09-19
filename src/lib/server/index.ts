@@ -308,7 +308,8 @@ export class RateLimiter<Extra = never> {
   ): Promise<{ limited: boolean; hash: string | null; ttl: number }> {
     let limited: boolean | undefined = undefined;
 
-    for (const plugin of this.plugins) {
+    for (let i = 0; i < this.plugins.length; i++) {
+      const plugin = this.plugins[i];
       const rate = plugin.rate;
       const id = await plugin.limiter.hash(event, extraData as never);
 
@@ -336,7 +337,8 @@ export class RateLimiter<Extra = never> {
         return { limited: false, hash: null, ttl: rate[1] };
       }
 
-      const hash = await this.hashFunction(id);
+      // Add the plugin index to the hash, so it differs between limiters with multiple rates
+      const hash = i.toString() + (await this.hashFunction(id));
       const currentRate = await this.store.add(hash, rate[1]);
 
       if (currentRate > rate[0]) {
