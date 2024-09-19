@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Plugins can now have an array of rates, so limits like "1 per secord, 100 per hour" can be set.
+- Plugins can now use an array of rates for the `rate` property, so limits like "1 per secord, 100 per hour" can be set.
+
+### Changed
+
+- The `RateLimiterStore` interface now uses `number` as second parameter to the `add` method.
 
 ## [0.5.2] - 2024-07-15
 
