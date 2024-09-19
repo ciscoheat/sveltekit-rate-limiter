@@ -1,8 +1,9 @@
-import { RateLimiter, RetryAfterRateLimiter } from '$lib/server';
+import type { Rate, RateLimiterPlugin } from '$lib/server/index.js';
+import { RateLimiter } from '$lib/server/rateLimiter.js';
+import { RetryAfterRateLimiter } from '$lib/server/retryAfterRateLimiter.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { mock } from 'vitest-mock-extended';
-import type { Rate, RateLimiterPlugin } from '$lib/server';
 
 const hashFunction = (input: string) => {
   const msgUint8 = new TextEncoder().encode(input);
