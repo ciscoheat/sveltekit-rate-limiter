@@ -1,7 +1,8 @@
-import type { HashFunction, Rate, RateLimiterPlugin } from '../index.js';
-import { defaultHashFunction } from '../hashFunction.js';
+import { defaultHashFunction, type HashFunction } from '../hashFunction.js';
 import type { Cookies, RequestEvent } from '@sveltejs/kit';
 import { nanoid } from 'nanoid';
+import type { RateLimiterPlugin } from './rateLimiterPlugin.js';
+import type { Rate } from '../rate.js';
 
 export type CookieSerializeOptions = NonNullable<Parameters<Cookies['set']>[2]>;
 

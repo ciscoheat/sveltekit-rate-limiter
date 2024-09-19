@@ -37,6 +37,14 @@
     "./server": {
       "types": "./dist/server/index.d.ts",
       "svelte": "./dist/server/index.js"
+    },
+    "./server/limiters": {
+      "types": "./dist/server/limiters/index.d.ts",
+      "svelte": "./dist/server/limiters/index.js"
+    },
+    "./server/stores": {
+      "types": "./dist/server/stores/index.d.ts",
+      "svelte": "./dist/server/stores/index.js"
     }
   },
   "typesVersions": {
@@ -81,6 +89,5 @@
   "dependencies": {
     "@isaacs/ttlcache": "^1.4.1"
   },
-  "type": "module",
-  "packageManager": "pnpm@9.10.0+sha512.73a29afa36a0d092ece5271de5177ecbf8318d454ecd701343131b8ebc0c1a91c487da46ab77c8e596d6acf1461e3594ced4becedf8921b074fbd8653ed7051c"
+  "type": "module"
 }

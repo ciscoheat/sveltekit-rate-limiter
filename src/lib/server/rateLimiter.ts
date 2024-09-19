@@ -1,17 +1,51 @@
-import { CookieRateLimiter } from './limiters/cookieRateLimiter.js';
+import {
+  CookieRateLimiter,
+  type CookieRateLimiterOptions
+} from './limiters/cookieRateLimiter.js';
 import { IPRateLimiter } from './limiters/ipRateLimiter.js';
 import { IPUserAgentRateLimiter } from './limiters/ipUaRateLimiter.js';
-import type { RequestEvent } from '@sveltejs/kit';
+import type { MaybePromise, RequestEvent } from '@sveltejs/kit';
 import { defaultHashFunction, type HashFunction } from './hashFunction.js';
 import { TTLStore } from './stores/ttlStore.js';
-import type { RateLimiterStore } from './stores/index.js';
-import {
-  TTLTime,
-  type Rate,
-  type RateLimiterOptions,
-  type RateLimiterPlugin,
-  type TTLRate
-} from './limiters/index.js';
+import { type RateLimiterPlugin } from './limiters/rateLimiterPlugin.js';
+import { TTLTime, type Rate } from './rate.js';
+import type { RateLimiterStore } from './stores/rateLimiterStore.js';
+
+export type RateLimiterOptions = Partial<{
+  plugins: RateLimiterPlugin[];
+  store: RateLimiterStore;
+  maxItems: number;
+  onLimited: (
+    event: RequestEvent,
+    reason: 'rate' | 'rejected'
+  ) => MaybePromise<void | boolean>;
+  /**
+   * @deprecated Add the IP/IPUA/cookie rates to the main object, no need for "rates".
+   */
+  rates: {
+    /**
+     * @deprecated Add the IP option to the main object, no need for "rates".
+     */
+    IP?: Rate;
+    /**
+     * @deprecated Add the IPUA option to the main object, no need for "rates".
+     */
+    IPUA?: Rate;
+    /**
+     * @deprecated Add cookie option to the main object, no need for "rates".
+     */
+    cookie?: CookieRateLimiterOptions;
+  };
+  IP: Rate | Rate[];
+  IPUA: Rate | Rate[];
+  cookie: CookieRateLimiterOptions;
+  hashFunction: HashFunction;
+}>;
+
+/**
+ * Like Rate, but with TTL as a number instead of a string unit
+ */
+type TTLRate = [number, number];
 
 export class RateLimiter<Extra = never> {
   private readonly store: RateLimiterStore;

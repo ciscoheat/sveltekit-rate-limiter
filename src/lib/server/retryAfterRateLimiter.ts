@@ -1,8 +1,7 @@
 import { type RateLimiterStore } from './stores/index.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { RetryAfterStore } from './stores/retryAfterStore.js';
-import { RateLimiter } from './rateLimiter.js';
-import type { RateLimiterOptions } from './limiters/index.js';
+import { RateLimiter, type RateLimiterOptions } from './rateLimiter.js';
 
 export class RetryAfterRateLimiter<Extra = never> extends RateLimiter<Extra> {
   private readonly retryAfter: RateLimiterStore;
