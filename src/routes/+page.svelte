@@ -2,27 +2,32 @@
   import { page } from '$app/stores';
   import type { ActionData, PageData } from './$types';
 
-  export let data: PageData;
-  export let form: ActionData;
+  const { data, form } = $props<{ data: PageData; form: ActionData }>();
 
-  let log: string[] = [];
+  let log = $state<string[]>([]);
+
+  const currentForm = $derived(form);
+  const isLimited = $derived(currentForm?.retryAfter && currentForm.retryAfter > 0);
+  const statusMessage = $derived(
+    isLimited && currentForm?.retryAfter // Ensure currentForm and retryAfter are defined
+      ? `You are rate limited, retry in ${currentForm.retryAfter} seconds.`
+      : 'OK'
+  );
 
   async function preflight(method: 'POST' | 'GET') {
     const response = await fetch(new URL('/preflight-required', $page.url), {
       method
     });
     const json = await response.json();
-    log = [...log, json.message];
+    log.push(json.message);
   }
 </script>
 
 <h1>Try the rate limiter</h1>
 
-{#if form}
-  <h3 class:limited={form.retryAfter}>
-    {form.retryAfter
-      ? `You are rate limited, retry in ${form.retryAfter} seconds.`
-      : 'OK'}
+{#if currentForm}
+  <h3 class:limited={isLimited}>
+    {statusMessage}
   </h3>
 {/if}
 
@@ -37,8 +42,8 @@
 
 <hr />
 
-<button on:click={() => preflight('POST')}>POST to preflight route</button>
-<button on:click={() => preflight('GET')}>GET preflight route</button>
+<button onclick={() => preflight('POST')}>POST to preflight route</button>
+<button onclick={() => preflight('GET')}>GET preflight route</button>
 
 <pre>
 {#each log as msg}{msg}<br />{/each}
