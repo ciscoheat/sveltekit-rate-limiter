@@ -4,7 +4,7 @@ import {
 } from './limiters/cookieRateLimiter.js';
 import { IPRateLimiter } from './limiters/ipRateLimiter.js';
 import { IPUserAgentRateLimiter } from './limiters/ipUaRateLimiter.js';
-import type { MaybePromise, RequestEvent } from '@sveltejs/kit';
+import type { RequestEvent } from '@sveltejs/kit';
 import { defaultHashFunction, type HashFunction } from './hashFunction.js';
 import { TTLStore } from './stores/ttlStore.js';
 import { type RateLimiterPlugin } from './limiters/rateLimiterPlugin.js';
@@ -18,7 +18,7 @@ export type RateLimiterOptions = Partial<{
   onLimited: (
     event: RequestEvent,
     reason: 'rate' | 'rejected'
-  ) => MaybePromise<void | boolean>;
+  ) => void | boolean | Promise<void | boolean>;
   /**
    * @deprecated Add the IP/IPUA/cookie rates to the main object, no need for "rates".
    */

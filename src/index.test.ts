@@ -418,7 +418,7 @@ describe('Plugins with extra data', () => {
     expect(extra.log[0]).toEqual('345.456.789.0abc@test.com');
 
     // @ts-expect-error No extra data specified
-    expect(limiter.isLimited(event)).rejects.toThrow();
+    await expect(limiter.isLimited(event)).rejects.toThrow();
 
     const limiter2 = new RateLimiter({
       hashFunction,
