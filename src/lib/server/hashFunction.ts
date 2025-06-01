@@ -1,5 +1,3 @@
-import type { RequestEvent } from '@sveltejs/kit'; // Keep RequestEvent if used elsewhere, or remove if not.
-
 export type HashFunction = (input: string) => string | Promise<string>;
 
 export let defaultHashFunction: HashFunction;
