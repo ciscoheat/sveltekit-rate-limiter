@@ -3,7 +3,7 @@ import type { RateLimiterPlugin } from '$lib/server/limiters/rateLimiterPlugin.j
 import { RateLimiter } from '$lib/server/rateLimiter.js';
 import { RetryAfterRateLimiter } from '$lib/server/retryAfterRateLimiter.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, assert } from 'vitest';
 import { mock } from 'vitest-mock-extended';
 
 const hashFunction = async (input: string) => {
@@ -166,7 +166,10 @@ describe('Basic rate limiter', async () => {
 
     expect(await limiter.isLimited(event)).toEqual(false); //  1 1 1
     expect(await limiter.isLimited(event)).toEqual(false); //  2 2 2
-    expect(await limiter.isLimited(event)).toEqual(true); // 3 2 2 (Cookie fails)
+    expect(await limiter.check(event)).toEqual({
+      limited: true,
+      reason: 'cookie'
+    }); // 3 2 2 (Cookie fails)
 
     event.cookies.delete('testcookie', { path: '/' });
 
@@ -491,8 +494,9 @@ describe('Retry-After rate limiter', () => {
     expect(status).toEqual({ limited: false, retryAfter: 0 });
 
     status = await limiter.check(event);
-    expect(status.limited).toBe(true);
+    assert(status.limited);
     expect(status.retryAfter.toString()).toMatch(/^[345]$/);
+    expect(status.reason).toEqual('IPUA');
 
     await delay(5100);
 
@@ -522,8 +526,9 @@ describe('Retry-After rate limiter', () => {
     expect(status).toEqual({ limited: false, retryAfter: 0 });
 
     status = await limiter.check(event);
-    expect(status.limited).toEqual(true);
+    assert(status.limited);
     expect(status.retryAfter.toString()).toMatch(/^[01]$/);
+    expect(status.reason).toEqual('IPUA');
 
     event.request.headers.set('User-Agent', 'Safari 2');
 
@@ -534,23 +539,26 @@ describe('Retry-After rate limiter', () => {
     expect(status).toEqual({ limited: false, retryAfter: 0 });
 
     status = await limiter.check(event);
-    expect(status.limited).toEqual(true);
+    assert(status.limited);
     expect(status.retryAfter).toBeGreaterThanOrEqual(59);
     expect(status.retryAfter).toBeLessThanOrEqual(60);
+    expect(status.reason).toEqual('IP');
 
     event.request.headers.set('User-Agent', 'Safari 3');
 
     status = await limiter.check(event);
-    expect(status.limited).toEqual(true);
+    assert(status.limited);
     expect(status.retryAfter).toBeGreaterThanOrEqual(59);
     expect(status.retryAfter).toBeLessThanOrEqual(60);
+    expect(status.reason).toEqual('IP');
 
     await delay(1100);
 
     status = await limiter.check(event);
-    expect(status.limited).toEqual(true);
+    assert(status.limited);
     expect(status.retryAfter).toBeGreaterThanOrEqual(58);
     expect(status.retryAfter).toBeLessThanOrEqual(59);
+    expect(status.reason).toEqual('IP');
 
     await limiter.clear();
 

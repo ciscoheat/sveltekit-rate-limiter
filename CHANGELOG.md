@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The `check` method now exists on both limiters, and will return a `reason` property.
 - `RateLimiterOptions` is now exported.
 
 ## [0.6.2] - 2025-06-17

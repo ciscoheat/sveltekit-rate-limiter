@@ -29,12 +29,19 @@ export class RetryAfterRateLimiter<Extra = never> extends RateLimiter<Extra> {
   /**
    * Check if a request event is rate limited.
    * @param {RequestEvent} event
-   * @returns {Promise<limited: boolean, retryAfter: number>} Rate limit status for the event.
+   * @returns {Promise<limited: boolean, retryAfter: number, reason: 'IP' | 'IPUA' | 'cookie' | number>} Rate limit status for the event.
    */
-  async check(
+  override async check(
     event: RequestEvent,
     extraData?: Extra
-  ): Promise<{ limited: boolean; retryAfter: number }> {
+  ): Promise<
+    | { limited: false; retryAfter: 0 }
+    | {
+        limited: true;
+        retryAfter: number;
+        reason: 'IP' | 'IPUA' | 'cookie' | number;
+      }
+  > {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await this._isLimited(event, extraData as any);
 
@@ -43,7 +50,8 @@ export class RetryAfterRateLimiter<Extra = never> extends RateLimiter<Extra> {
     if (result.hash === null) {
       return {
         limited: true,
-        retryAfter: RetryAfterRateLimiter.toSeconds(result.ttl)
+        retryAfter: RetryAfterRateLimiter.toSeconds(result.ttl),
+        reason: result.reason
       };
     }
 
@@ -51,6 +59,6 @@ export class RetryAfterRateLimiter<Extra = never> extends RateLimiter<Extra> {
       (await this.retryAfter.add(result.hash, result.ttl)) - Date.now()
     );
 
-    return { limited: true, retryAfter };
+    return { limited: true, retryAfter, reason: result.reason };
   }
 }

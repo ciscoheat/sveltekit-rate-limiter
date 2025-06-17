@@ -48,6 +48,17 @@ export const actions = {
   default: async (event) => {
     // Every call to isLimited counts as a hit towards the rate limit for the event.
     if (await limiter.isLimited(event)) throw error(429);
+  },
+
+  debug: async (event) => {
+    // Alternatively you can call check to get more details.
+    // (will also count as a hit)
+    const status = await limiter.check(event);
+    if (status.limited) {
+      // 'IP' | 'IPUA' | 'cookie' | number
+      console.log('Limited due to ' + status.reason);
+      throw error(429);
+    }
   }
 };
 ```

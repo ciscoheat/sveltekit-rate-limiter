@@ -90,12 +90,42 @@ export class RateLimiter<Extra = never> {
   /**
    * Check if a request event is rate limited.
    * @param {RequestEvent} event
+   * @returns {Promise<limited: boolean, reason: 'IP' | 'IPUA' | 'cookie' | number>} Rate limit status for the event.
+   */
+  async check(
+    event: RequestEvent,
+    extraData?: Extra
+  ): Promise<
+    | { limited: false }
+    | {
+        limited: true;
+        reason: 'IP' | 'IPUA' | 'cookie' | number;
+      }
+  > {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await this._isLimited(event, extraData as any);
+
+    if (!result.limited) return { limited: false };
+    return { limited: true, reason: result.reason };
+  }
+
+  /**
+   * Check if a request event is rate limited.
+   * @param {RequestEvent} event
    * @returns {Promise<boolean>} true if request is limited, false otherwise
    */
   protected async _isLimited(
     event: RequestEvent,
     extraData: Extra
-  ): Promise<{ limited: boolean; hash: string | null; ttl: number }> {
+  ): Promise<
+    | { limited: false; hash: string | null; ttl: number }
+    | {
+        limited: true;
+        hash: string | null;
+        ttl: number;
+        reason: 'IP' | 'IPUA' | 'cookie' | number;
+      }
+  > {
     let limited: boolean | undefined = undefined;
 
     for (let i = 0; i < this.plugins.length; i++) {
@@ -109,7 +139,12 @@ export class RateLimiter<Extra = never> {
           if (status === true)
             return { limited: false, hash: null, ttl: rate[1] };
         }
-        return { limited: true, hash: null, ttl: rate[1] };
+        return {
+          limited: true,
+          hash: null,
+          ttl: rate[1],
+          reason: this.limitReason(plugin.limiter, i)
+        };
       } else if (id === null) {
         if (limited === undefined) limited = true;
         continue;
@@ -136,15 +171,42 @@ export class RateLimiter<Extra = never> {
           const status = await this.onLimited(event, 'rate');
           if (status === true) return { limited: false, hash, ttl: rate[1] };
         }
-        return { limited: true, hash, ttl: rate[1] };
+        return {
+          limited: true,
+          hash,
+          ttl: rate[1],
+          reason: this.limitReason(plugin.limiter, i)
+        };
       }
     }
 
+    if (limited) {
+      return {
+        limited: true,
+        hash: null,
+        ttl: this.plugins[this.plugins.length - 1].rate[1],
+        reason: this.limitReason(
+          this.plugins[this.plugins.length - 1].limiter,
+          this.plugins.length - 1
+        )
+      };
+    }
+
     return {
-      limited: limited ?? false,
+      limited: false,
       hash: null,
       ttl: this.plugins[this.plugins.length - 1].rate[1]
     };
+  }
+
+  protected limitReason(
+    plugin: RateLimiterPlugin,
+    index: number
+  ): 'IP' | 'IPUA' | 'cookie' | number {
+    if (plugin instanceof IPRateLimiter) return 'IP';
+    if (plugin instanceof IPUserAgentRateLimiter) return 'IPUA';
+    if (plugin instanceof CookieRateLimiter) return 'cookie';
+    return index;
   }
 
   constructor(options: RateLimiterOptions = {}) {
