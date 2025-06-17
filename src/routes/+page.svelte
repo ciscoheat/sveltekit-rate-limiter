@@ -7,7 +7,9 @@
   let log = $state<string[]>([]);
 
   const currentForm = $derived(form);
-  const isLimited = $derived(currentForm?.retryAfter && currentForm.retryAfter > 0);
+  const isLimited = $derived(
+    currentForm?.retryAfter && currentForm.retryAfter > 0
+  );
   const statusMessage = $derived(
     isLimited && currentForm?.retryAfter // Ensure currentForm and retryAfter are defined
       ? `You are rate limited, retry in ${currentForm.retryAfter} seconds.`
@@ -51,8 +53,17 @@
 
 <style>
   form {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-      Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue',
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      Oxygen,
+      Ubuntu,
+      Cantarell,
+      'Open Sans',
+      'Helvetica Neue',
       sans-serif;
   }
 
