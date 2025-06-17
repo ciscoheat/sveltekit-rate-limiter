@@ -54,6 +54,10 @@ export class CookieRateLimiter implements RateLimiterPlugin {
       if (userId) return userId;
     }
 
+    return this.setPreflightCookie(event);
+  }
+
+  private async setPreflightCookie(event: RequestEvent) {
     const userId = nanoid();
 
     event.cookies.set(
@@ -68,16 +72,17 @@ export class CookieRateLimiter implements RateLimiterPlugin {
     cookie: string | undefined,
     event: RequestEvent
   ): Promise<string | null> {
-    const empty = () => {
-      return this.requirePreflight ? null : this.preflight(event);
-    };
+    if (!cookie) return this.requirePreflight ? null : this.preflight(event);
 
-    if (!cookie) return empty();
     const [userId, secretHash] = cookie.split(';');
-    if (!userId || !secretHash) return empty();
-    if ((await this.hashFunction(this.secret + userId)) != secretHash) {
-      return empty();
+    if (!userId || !secretHash) {
+      return this.setPreflightCookie(event);
     }
+
+    if ((await this.hashFunction(this.secret + userId)) != secretHash) {
+      return this.setPreflightCookie(event);
+    }
+
     return userId;
   }
 }

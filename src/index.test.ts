@@ -6,14 +6,11 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { mock } from 'vitest-mock-extended';
 
-const hashFunction = (input: string) => {
+const hashFunction = async (input: string) => {
   const msgUint8 = new TextEncoder().encode(input);
-  return crypto.subtle
-    .digest('SHA-256', msgUint8)
-    .then((buffer) => Array.from(new Uint8Array(buffer)))
-    .then((hashArray) => {
-      return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-    });
+  const buffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(buffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 };
 
 async function delay(ms: number) {
@@ -167,8 +164,6 @@ describe('Basic rate limiter', async () => {
 
     const event = mockEvent() as RequestEvent;
 
-    await limiter.cookieLimiter?.preflight(event);
-
     expect(await limiter.isLimited(event)).toEqual(false); //  1 1 1
     expect(await limiter.isLimited(event)).toEqual(false); //  2 2 2
     expect(await limiter.isLimited(event)).toEqual(true); // 3 2 2 (Cookie fails)
@@ -217,6 +212,23 @@ describe('Basic rate limiter', async () => {
     expect(await limiter.isLimited(event)).toEqual(true); // 3 3 3 (Cookie fails)
 
     expect(limits).toEqual(new Array(10).fill('rate'));
+  });
+
+  it('should not cause an infinite loop in preflight when the cookie is invalid', async () => {
+    const event = mockEvent() as RequestEvent;
+    event.cookies.set('testcookie', 'invalid', { path: '/' });
+
+    const limiter = new RateLimiter({
+      hashFunction,
+      cookie: {
+        name: 'testcookie',
+        secret: 'SECRET',
+        rate: [2, '500ms'],
+        preflight: false
+      }
+    });
+
+    expect(await limiter.cookieLimiter?.preflight(event)).toMatch(/^[\w-]+$/);
   });
 
   describe('Short-circuiting the plugin chain when a boolean is returned', () => {
