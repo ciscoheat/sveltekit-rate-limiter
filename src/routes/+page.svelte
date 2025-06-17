@@ -12,7 +12,7 @@
   );
   const statusMessage = $derived(
     isLimited && currentForm?.retryAfter // Ensure currentForm and retryAfter are defined
-      ? `You are rate limited, retry in ${currentForm.retryAfter} seconds.`
+      ? `You are rate limited due to ${currentForm.reason}, retry in ${currentForm.retryAfter} seconds.`
       : 'OK'
   );
 

@@ -4,7 +4,7 @@ import type { PageServerLoad } from './$types';
 
 const rates = {
   IP: [3, 'm'] satisfies Rate,
-  IPUA: [1, '15s'] satisfies Rate
+  IPUA: [1, '5s'] satisfies Rate
 };
 
 const limiter = new RetryAfterRateLimiter({ rates });
@@ -20,7 +20,10 @@ export const actions = {
       event.setHeaders({
         'Retry-After': status.retryAfter.toString()
       });
-      return fail(429, { retryAfter: status.retryAfter });
+      return fail(429, {
+        reason: status.reason,
+        retryAfter: status.retryAfter
+      });
     }
     return { retryAfter: 0 };
   }
