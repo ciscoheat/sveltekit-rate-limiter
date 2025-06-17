@@ -5,22 +5,17 @@ Headlines: Added, Changed, Deprecated, Removed, Fixed, Security
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.0] - 2025-06-17
 
 ### Added
 
 - The `check` method now exists on both limiters, and will return a `reason` property.
 - `RateLimiterOptions` is now exported.
-
-## [0.6.2] - 2025-06-17
+- Package updates for Svelte 5 and general QOL improvements [#18](https://github.com/ciscoheat/sveltekit-rate-limiter/pull/18), thanks to [screenfluent](https://github.com/screenfluent)!
 
 ### Fixed
 
 - Fixed so invalid cookie data does not cause an infinite loop when `preflight` is `false`.
-
-### Added
-
-- Package updates for Svelte 5 and general QOL improvements [#18](https://github.com/ciscoheat/sveltekit-rate-limiter/pull/18), thanks to [screenfluent](https://github.com/screenfluent)!
 
 ## [0.6.1] - 2024-09-19
 
