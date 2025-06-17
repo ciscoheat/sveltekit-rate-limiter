@@ -1,4 +1,4 @@
-export { RateLimiter } from './rateLimiter.js';
+export { RateLimiter, type RateLimiterOptions } from './rateLimiter.js';
 export { RetryAfterRateLimiter } from './retryAfterRateLimiter.js';
 export { defaultHashFunction } from './hashFunction.js';
 export { TTLTime } from './rate.js';
