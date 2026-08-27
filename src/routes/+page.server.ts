@@ -1,4 +1,4 @@
-import { type Rate, RetryAfterRateLimiter } from '$lib/server';
+import { type Rate, RetryAfterRateLimiter } from '#lib/server/index.js';
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 

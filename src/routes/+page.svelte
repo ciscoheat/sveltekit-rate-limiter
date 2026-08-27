@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import type { ActionData, PageData } from './$types';
 
   const { data, form } = $props<{ data: PageData; form: ActionData }>();
@@ -17,7 +17,7 @@
   );
 
   async function preflight(method: 'POST' | 'GET') {
-    const response = await fetch(new URL('/preflight-required', $page.url), {
+    const response = await fetch(new URL('/preflight-required', page.url.href), {
       method
     });
     const json = await response.json();

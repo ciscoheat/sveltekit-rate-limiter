@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { RateLimiter } from '$lib/server';
+import { RateLimiter } from '#lib/server/index.js';
 import { error, json } from '@sveltejs/kit';
 
 const limiter = new RateLimiter({

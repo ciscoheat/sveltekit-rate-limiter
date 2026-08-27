@@ -1,7 +1,7 @@
-import type { Rate } from '$lib/server/rate.js';
-import type { RateLimiterPlugin } from '$lib/server/limiters/rateLimiterPlugin.js';
-import { RateLimiter } from '$lib/server/rateLimiter.js';
-import { RetryAfterRateLimiter } from '$lib/server/retryAfterRateLimiter.js';
+import type { Rate } from '#lib/server/rate.js';
+import type { RateLimiterPlugin } from '#lib/server/limiters/rateLimiterPlugin.js';
+import { RateLimiter } from '#lib/server/rateLimiter.js';
+import { RetryAfterRateLimiter } from '#lib/server/retryAfterRateLimiter.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { describe, it, expect, beforeEach, assert } from 'vitest';
 import { mock } from 'vitest-mock-extended';
@@ -56,6 +56,9 @@ function mockEvent(): Partial<RequestEvent> {
       },
       delete(name) {
         cookieStore.delete(name);
+      },
+      parse() {
+        throw new Error('Not implemented.');
       },
       serialize() {
         throw new Error('Not implemented.');
