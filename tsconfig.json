@@ -10,7 +10,7 @@
     "sourceMap": true,
     "strict": true
   },
-  "exclude": ["dist"]
+  "exclude": ["dist", "eslint.config.mjs"]
   // Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
   //
   // If you want to overwrite includes/excludes, make sure to copy over the relevant includes/excludes

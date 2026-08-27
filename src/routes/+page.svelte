@@ -17,9 +17,12 @@
   );
 
   async function preflight(method: 'POST' | 'GET') {
-    const response = await fetch(new URL('/preflight-required', page.url.href), {
-      method
-    });
+    const response = await fetch(
+      new URL('/preflight-required', page.url.href),
+      {
+        method
+      }
+    );
     const json = await response.json();
     log.push(json.message);
   }
@@ -48,7 +51,7 @@
 <button onclick={() => preflight('GET')}>GET preflight route</button>
 
 <pre>
-{#each log as msg}{msg}<br />{/each}
+{#each log as msg (msg)}{msg}<br />{/each}
 </pre>
 
 <style>
