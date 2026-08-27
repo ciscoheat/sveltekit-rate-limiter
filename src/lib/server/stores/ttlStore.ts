@@ -1,5 +1,5 @@
 import type { RateLimiterStore } from './rateLimiterStore.js';
-import TTLCache from '@isaacs/ttlcache';
+import { TTLCache } from '@isaacs/ttlcache';
 
 export class TTLStore implements RateLimiterStore {
   private cache: TTLCache<string, number>;

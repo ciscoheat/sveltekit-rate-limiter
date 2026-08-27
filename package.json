@@ -87,7 +87,7 @@
     "vitest-mock-extended": "^3.1.0"
   },
   "dependencies": {
-    "@isaacs/ttlcache": "^1.4.1"
+    "@isaacs/ttlcache": "^2.1.5"
   },
   "type": "module",
   "packageManager": "pnpm@11.21.0"
