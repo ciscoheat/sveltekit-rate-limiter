@@ -89,5 +89,6 @@
   "dependencies": {
     "@isaacs/ttlcache": "^1.4.1"
   },
-  "type": "module"
+  "type": "module",
+  "packageManager": "pnpm@11.21.0"
 }
