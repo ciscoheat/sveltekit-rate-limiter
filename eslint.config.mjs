@@ -1,9 +1,16 @@
 import eslint from '@eslint/js';
+import { loadConfig } from '@sveltejs/load-config';
 import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import prettier from 'eslint-config-prettier';
 import svelte from 'eslint-plugin-svelte';
 import globals from 'globals';
+
+const svelteConfigResult = await loadConfig('vite.config.ts');
+const svelteConfig =
+  svelteConfigResult && 'config' in svelteConfigResult
+    ? svelteConfigResult.config
+    : {};
 
 export default [
   {
@@ -48,7 +55,8 @@ export default [
         ...globals.node
       },
       parserOptions: {
-        parser: typescriptParser
+        parser: typescriptParser,
+        svelteConfig
       }
     }
   }

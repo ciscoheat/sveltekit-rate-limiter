@@ -24,6 +24,9 @@ importers:
       '@sveltejs/kit':
         specifier: 3.0.0-next.25
         version: 3.0.0-next.25(@sveltejs/vite-plugin-svelte@5.1.1(supports-color@10.2.2)(svelte@5.56.10(@typescript-eslint/types@8.68.0))(vite@8.2.2(esbuild@0.28.1)))(svelte@5.56.10(@typescript-eslint/types@8.68.0))(typescript@6.0.3)(vite@8.2.2(esbuild@0.28.1))
+      '@sveltejs/load-config':
+        specifier: ^0.2.3
+        version: 0.2.3
       '@sveltejs/package':
         specifier: ^2.5.8
         version: 2.5.8(svelte@5.56.10(@typescript-eslint/types@8.68.0))(typescript@6.0.3)
