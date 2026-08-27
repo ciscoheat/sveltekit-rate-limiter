@@ -1,6 +1,6 @@
 {
   "name": "sveltekit-rate-limiter",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "author": "Andreas Söderlund <ciscoheat@gmail.com> (https://blog.encodeart.dev)",
   "description": "A modular rate limiter for SvelteKit. Use in password resets, account registration, etc.",
   "keywords": [
@@ -60,7 +60,7 @@
     "dist"
   ],
   "peerDependencies": {
-    "@sveltejs/kit": "^2.12.0 || >=3.0.0-next.25 <4.0.0"
+    "@sveltejs/kit": "2.x || >=3.0.0-next.25 <4.0.0"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "8.0.0-next.3",
